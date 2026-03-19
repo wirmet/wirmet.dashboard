@@ -8,8 +8,6 @@ interface TopBarContextValue {
   setTitle: (title: string) => void
   icon: IconSvgElement | null
   setIcon: (icon: IconSvgElement | null) => void
-  sidebarOpen: boolean
-  toggleSidebar: () => void
 }
 
 const TopBarContext = React.createContext<TopBarContextValue | null>(null)
@@ -17,15 +15,10 @@ const TopBarContext = React.createContext<TopBarContextValue | null>(null)
 export function TopBarProvider({ children }: { children: React.ReactNode }) {
   const [title, setTitle] = React.useState("Dashboard")
   const [icon, setIcon] = React.useState<IconSvgElement | null>(null)
-  const [sidebarOpen, setSidebarOpen] = React.useState(true)
-
-  const toggleSidebar = React.useCallback(() => {
-    setSidebarOpen((prev) => !prev)
-  }, [])
 
   const value = React.useMemo(
-    () => ({ title, setTitle, icon, setIcon, sidebarOpen, toggleSidebar }),
-    [title, icon, sidebarOpen, toggleSidebar]
+    () => ({ title, setTitle, icon, setIcon }),
+    [title, icon]
   )
 
   return (

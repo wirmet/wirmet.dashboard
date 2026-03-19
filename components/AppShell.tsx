@@ -1,19 +1,24 @@
 "use client"
 
-import { Sidebar } from "@/components/Sidebar"
+import * as React from "react"
+import { AppSidebar } from "@/components/Sidebar"
 import { TopBar } from "@/components/TopBar"
-import { useTopBarContext } from "@/components/TopBarContext"
+import { SidebarProvider } from "@/components/ui/sidebar"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { UserProvider } from "@/components/UserContext"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { sidebarOpen } = useTopBarContext()
-
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
+    <UserProvider>
+    <TooltipProvider>
+    <SidebarProvider>
+      <AppSidebar />
       <div className="flex flex-1 flex-col min-w-0">
         <TopBar />
         <main className="flex-1 bg-zinc-50">{children}</main>
       </div>
-    </div>
+    </SidebarProvider>
+    </TooltipProvider>
+    </UserProvider>
   )
 }

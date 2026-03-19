@@ -158,10 +158,10 @@ function ProjectDialog({ project }: { project: Project }) {
 
         <div className="mt-2 flex items-center justify-between">
           <StatusBadge status={project.status} />
-          <button className="flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-50">
-            <HugeiconsIcon icon={PencilEdit01Icon} size={13} className="text-zinc-700" />
+          <Button variant="outline" size="lg">
+            <HugeiconsIcon icon={PencilEdit01Icon} size={13} />
             Edit
-          </button>
+          </Button>
         </div>
       </div>
 

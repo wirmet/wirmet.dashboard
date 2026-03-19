@@ -66,6 +66,39 @@ npm run build    # Production build with TypeScript check
 npm run lint     # Run ESLint
 ```
 
+## Component Styles
+
+### DropdownMenu
+Always use this pattern for `DropdownMenuContent` — light mode forced via CSS variable overrides, with a visible border:
+
+```tsx
+<DropdownMenuContent
+  align="end"
+  className="w-36 border border-zinc-200"
+  style={{
+    "--popover": "oklch(1 0 0)",
+    "--popover-foreground": "oklch(0.145 0 0)",
+    "--accent": "oklch(0.97 0 0)",
+    "--accent-foreground": "oklch(0.205 0 0)",
+    "--border": "oklch(0.922 0 0)",
+  } as React.CSSProperties}
+>
+  <DropdownMenuItem>
+    <SomeIcon />
+    Label
+  </DropdownMenuItem>
+  <DropdownMenuSeparator />
+  <DropdownMenuItem variant="destructive">
+    <DeleteIcon />
+    Delete
+  </DropdownMenuItem>
+</DropdownMenuContent>
+```
+
+- Icons go directly inside `DropdownMenuItem` with no extra wrapper
+- Destructive action uses `variant="destructive"` — no manual color classes
+- CSS variables force light mode regardless of active theme
+
 ## Claude Behavior Rules
 
 - I am a designer, not a developer — explain technical decisions in simple, plain language

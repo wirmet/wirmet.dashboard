@@ -1,5 +1,9 @@
+"use client"
+
+import { useState, useMemo } from "react"
 import { PageSetup } from "@/components/PageSetup"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Table,
@@ -10,9 +14,18 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Add01Icon, Search01Icon, UserGroupIcon } from "@hugeicons/core-free-icons"
+import {
+  Add01Icon,
+  Search01Icon,
+  UserGroupIcon,
+  ArrowUp01Icon,
+  ArrowDown01Icon,
+} from "@hugeicons/core-free-icons"
+import { cn } from "@/lib/utils"
 
 type SupplierType = "Materiały budowlane" | "Narzędzia" | "Instalacje" | "Transport"
+type SortDirection = "asc" | "desc"
+type SortColumn = "name" | "nip" | "address" | "contact" | "phone" | "type"
 
 interface Supplier {
   name: string
@@ -73,7 +86,61 @@ const typeStyle: Record<SupplierType, string> = {
   "Transport":           "bg-green-50 text-green-700 border-green-200",
 }
 
+function SortIcon({ column, sortColumn, sortDirection }: {
+  column: SortColumn
+  sortColumn: SortColumn | null
+  sortDirection: SortDirection
+}) {
+  const isActive = sortColumn === column
+  return (
+    <span className="flex flex-col gap-px">
+      <HugeiconsIcon
+        icon={ArrowUp01Icon}
+        size={10}
+        className={isActive && sortDirection === "asc" ? "text-zinc-700" : "text-zinc-400"}
+      />
+      <HugeiconsIcon
+        icon={ArrowDown01Icon}
+        size={10}
+        className={isActive && sortDirection === "desc" ? "text-zinc-700" : "text-zinc-400"}
+      />
+    </span>
+  )
+}
+
+const columns: { key: SortColumn; label: string }[] = [
+  { key: "name",    label: "Firma" },
+  { key: "nip",     label: "NIP" },
+  { key: "address", label: "Adres" },
+  { key: "contact", label: "Kontakt" },
+  { key: "phone",   label: "Telefon" },
+  { key: "type",    label: "Typ" },
+]
+
 export default function SuppliersPage() {
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
+
+  function handleSort(column: SortColumn) {
+    if (sortColumn === column) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"))
+    } else {
+      setSortColumn(column)
+      setSortDirection("asc")
+    }
+  }
+
+  const sorted = useMemo(() => {
+    if (!sortColumn) return suppliers
+    return [...suppliers].sort((a, b) => {
+      const valA = a[sortColumn].toLowerCase()
+      const valB = b[sortColumn].toLowerCase()
+      if (valA < valB) return sortDirection === "asc" ? -1 : 1
+      if (valA > valB) return sortDirection === "asc" ? 1 : -1
+      return 0
+    })
+  }, [sortColumn, sortDirection])
+
   return (
     <>
       <PageSetup title="Suppliers" icon={UserGroupIcon} />
@@ -111,10 +178,10 @@ export default function SuppliersPage() {
               />
             </div>
 
-            <button className="flex h-9 items-center gap-1.5 rounded-md bg-amber-500 px-3 text-sm font-medium text-white hover:bg-amber-600 transition-colors">
+            <Button variant="brand" size="lg">
               <HugeiconsIcon icon={Add01Icon} size={14} />
               Add Supplier
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -122,18 +189,27 @@ export default function SuppliersPage() {
         <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="border-zinc-100 hover:bg-transparent">
-                <TableHead className="pl-5 text-zinc-400 font-medium text-[11px] uppercase tracking-wide">Firma</TableHead>
-                <TableHead className="text-zinc-400 font-medium text-[11px] uppercase tracking-wide">NIP</TableHead>
-                <TableHead className="text-zinc-400 font-medium text-[11px] uppercase tracking-wide">Adres</TableHead>
-                <TableHead className="text-zinc-400 font-medium text-[11px] uppercase tracking-wide">Kontakt</TableHead>
-                <TableHead className="text-zinc-400 font-medium text-[11px] uppercase tracking-wide">Telefon</TableHead>
-                <TableHead className="text-zinc-400 font-medium text-[11px] uppercase tracking-wide">Typ</TableHead>
+              <TableRow>
+                {columns.map((col, i) => (
+                  <TableHead
+                    key={col.key}
+                    onClick={() => handleSort(col.key)}
+                    className={cn(
+                      "cursor-pointer select-none hover:text-zinc-600 transition-colors",
+                      i === 0 && "pl-5"
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      {col.label}
+                      <SortIcon column={col.key} sortColumn={sortColumn} sortDirection={sortDirection} />
+                    </div>
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {suppliers.map((s) => (
-                <TableRow key={s.nip} className="border-zinc-100 hover:bg-zinc-50 cursor-pointer">
+              {sorted.map((s) => (
+                <TableRow key={s.nip} className="cursor-pointer">
                   <TableCell className="pl-5 font-medium text-zinc-900">{s.name}</TableCell>
                   <TableCell className="font-mono text-zinc-400">{s.nip}</TableCell>
                   <TableCell className="text-zinc-500">{s.address}</TableCell>
