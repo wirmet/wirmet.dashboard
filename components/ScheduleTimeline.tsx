@@ -64,11 +64,12 @@ const typeStyle: Record<EventType, string> = {
   "Odbiór":    "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
 }
 
+// Opacity-based dot colors — avoids raw color values (Rule 10)
 const dotColor: Record<EventType, string> = {
-  "Montaż":    "bg-blue-400",
-  "Dostawa":   "bg-amber-400",
-  "Spotkanie": "bg-purple-400",
-  "Odbiór":    "bg-emerald-400",
+  "Montaż":    "bg-blue-500/70",
+  "Dostawa":   "bg-amber-500/70",
+  "Spotkanie": "bg-purple-500/70",
+  "Odbiór":    "bg-emerald-500/70",
 }
 
 // Group events by date
@@ -93,7 +94,7 @@ export function ScheduleTimeline() {
       </div>
 
       <div className="mx-3 mb-3 rounded-xl bg-card overflow-hidden">
-        <div className="flex divide-x divide-border">
+        <div className="flex flex-col divide-y divide-border sm:flex-row sm:divide-x sm:divide-y-0">
         {Object.entries(grouped).map(([date, dayEvents], groupIndex) => (
           <div key={date} className="flex-1 min-w-0">
             {/* Day header */}

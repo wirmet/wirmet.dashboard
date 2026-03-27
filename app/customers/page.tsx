@@ -43,7 +43,6 @@ import {
 import { Card } from "@/components/ui/card"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  Add01Icon,
   Search01Icon,
   UserIcon,
   ArrowUp01Icon,
@@ -63,29 +62,11 @@ import {
   ArrowLeft01Icon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
+import { useCustomers, type Customer } from "@/components/CustomersContext"
+import { AddCustomerDialog } from "@/components/AddCustomerDialog"
 
 type SortDirection = "asc" | "desc"
 type SortColumn = "name" | "company" | "nip" | "address" | "contact" | "phone" | "email"
-
-interface Customer {
-  id: string
-  name: string
-  company: string
-  nip: string
-  address: string
-  contact: string
-  phone: string
-  email: string
-}
-
-const initialCustomers: Customer[] = [
-  { id: "1", name: "Marek Wiśniewski", company: "MW Budownictwo Sp. z o.o.", nip: "PL 7811234567", address: "ul. Nowa 14, Warszawa", contact: "Marek Wiśniewski", phone: "+48 601 234 567", email: "marek@mwbudownictwo.pl" },
-  { id: "2", name: "Agnieszka Kowalska", company: "AK Nieruchomości", nip: "PL 5261098765", address: "ul. Krakowska 3, Kraków", contact: "Agnieszka Kowalska", phone: "+48 602 345 678", email: "a.kowalska@aknieruchomosci.pl" },
-  { id: "3", name: "Piotr Zając", company: "Zając Inwestycje", nip: "PL 6341876543", address: "ul. Wrocławska 7, Wrocław", contact: "Piotr Zając", phone: "+48 603 456 789", email: "piotr@zajac-inwestycje.pl" },
-  { id: "4", name: "Katarzyna Nowak", company: "Nowak & Syn Budowa", nip: "PL 8521654321", address: "ul. Poznańska 22, Poznań", contact: "Katarzyna Nowak", phone: "+48 604 567 890", email: "k.nowak@nowaksyn.pl" },
-  { id: "5", name: "Tomasz Dąbrowski", company: "TechBuild S.A.", nip: "PL 9431543210", address: "ul. Gdańska 11, Gdańsk", contact: "Tomasz Dąbrowski", phone: "+48 605 678 901", email: "t.dabrowski@techbuild.pl" },
-  { id: "6", name: "Joanna Lewandowska", company: "Lewandowska Consulting", nip: "PL 7123456789", address: "ul. Łódzka 5, Łódź", contact: "Joanna Lewandowska", phone: "+48 606 789 012", email: "joanna@lewandowska.pl" },
-]
 
 // — Mock relational data —
 
@@ -229,36 +210,16 @@ const selectChevron = {
 }
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers)
+  const { customers, addCustomer, updateCustomer, deleteCustomer } = useCustomers()
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
-  const [addOpen, setAddOpen] = useState(false)
   const [viewCustomer, setViewCustomer] = useState<Customer | null>(null)
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null)
 
   const emptyForm = { name: "", company: "", nip: "", address: "", contact: "", phone: "", email: "" }
-  const [form, setForm] = useState(emptyForm)
-  const [nameError, setNameError] = useState(false)
   const [editForm, setEditForm] = useState(emptyForm)
   const [editNameError, setEditNameError] = useState(false)
-
-  function handleOpenChange(open: boolean) {
-    setAddOpen(open)
-    if (!open) {
-      setForm(emptyForm)
-      setNameError(false)
-    }
-  }
-
-  function handleSubmit() {
-    if (!form.name.trim()) {
-      setNameError(true)
-      return
-    }
-    setCustomers((prev) => [...prev, { id: crypto.randomUUID(), ...form }])
-    handleOpenChange(false)
-  }
 
   function handleEditOpen(customer: Customer) {
     setEditCustomer(customer)
@@ -278,7 +239,7 @@ export default function CustomersPage() {
       setEditNameError(true)
       return
     }
-    setCustomers((prev) => prev.map((c) => c.id === editCustomer!.id ? { ...c, ...editForm } : c))
+    updateCustomer(editCustomer!.id, editForm)
     handleEditOpenChange(false)
     setEditCustomer(null)
   }
@@ -529,7 +490,7 @@ export default function CustomersPage() {
               <AlertDialogAction
                 variant="destructive"
                 onClick={() => {
-                  setCustomers((prev) => prev.filter((x) => x.id !== deleteTarget!.id))
+                  deleteCustomer(deleteTarget!.id)
                   setDeleteTarget(null)
                   setViewCustomer(null)
                 }}
@@ -612,10 +573,7 @@ export default function CustomersPage() {
               />
             </div>
 
-            <Button variant="default" size="lg" onClick={() => setAddOpen(true)}>
-              <HugeiconsIcon icon={Add01Icon} size={14} />
-              Add Customer
-            </Button>
+            <AddCustomerDialog />
           </div>
         </div>
 
@@ -709,95 +667,6 @@ export default function CustomersPage() {
           </Table>
         </div>
       </div>
-
-      {/* Add Customer modal */}
-      <Dialog open={addOpen} onOpenChange={handleOpenChange}>
-        <DialogContent
-          className="sm:max-w-lg bg-white text-zinc-900"
-          style={{
-            "--ring": "oklch(0.922 0 0)",
-            "--border": "oklch(0.922 0 0)",
-            "--muted-foreground": "oklch(0.556 0 0)",
-          } as React.CSSProperties}
-        >
-          <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-zinc-900">
-              New Customer
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="grid grid-cols-2 gap-x-4 gap-y-4 py-2">
-            {/* Client Name */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Full Name <span className="text-red-500">*</span></label>
-              <Input
-                placeholder="John Smith"
-                value={form.name}
-                onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setNameError(false) }}
-                className={cn("h-9 bg-white text-sm text-zinc-900 placeholder:text-zinc-400", nameError ? "border-red-400 focus:ring-red-200" : "border-zinc-200")}
-              />
-              {nameError
-                ? <p className="text-[11px] text-red-500">Full name is required.</p>
-                : <p className="text-[11px] text-zinc-400">First and last name of the client.</p>
-              }
-            </div>
-
-            {/* Company */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Company Name</label>
-              <Input placeholder="Acme Ltd." value={form.company} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
-              <p className="text-[11px] text-zinc-400">Leave blank for individual clients.</p>
-            </div>
-
-            {/* NIP — full width with GUS button */}
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Tax ID (NIP)</label>
-              <div className="flex gap-2">
-                <Input placeholder="PL 0000000000" value={form.nip} onChange={(e) => setForm((f) => ({ ...f, nip: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400 font-mono" />
-                <Button variant="outline" size="lg" className="shrink-0">
-                  Fetch from GUS
-                </Button>
-              </div>
-              <p className="text-[11px] text-zinc-400">Enter a NIP and click "Fetch from GUS" to auto-fill company details.</p>
-            </div>
-
-            {/* Address — full width */}
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Address</label>
-              <Input placeholder="123 Main St, Warsaw" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
-            </div>
-
-            {/* Contact */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Contact Person</label>
-              <Input placeholder="John Smith" value={form.contact} onChange={(e) => setForm((f) => ({ ...f, contact: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
-              <p className="text-[11px] text-zinc-400">Who to reach out to at this company.</p>
-            </div>
-
-            {/* Phone */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Phone</label>
-              <Input placeholder="+48 600 000 000" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
-              <p className="text-[11px] text-zinc-400">Include country code, e.g. +48.</p>
-            </div>
-
-            {/* Email — full width */}
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Email</label>
-              <Input type="email" placeholder="john@company.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
-            </div>
-          </div>
-
-          <DialogFooter className="pt-2">
-            <DialogClose asChild>
-              <Button variant="outline" size="lg">Cancel</Button>
-            </DialogClose>
-            <Button variant="default" size="lg" onClick={handleSubmit}>
-              Add Customer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
 
 

@@ -75,9 +75,9 @@ const projects: Project[] = [
     deliveryDate: "18 Mar 2025",
     completionDate: "20 Mar 2025",
     items: [
-      { name: "Steel railing system", quantity: 12, unit: "m", unitPrice: 185 },
-      { name: "Mounting brackets", quantity: 24, unit: "pcs", unitPrice: 18 },
-      { name: "Installation labour", quantity: 8, unit: "h", unitPrice: 120 },
+      { name: "System balustrad stalowych", quantity: 12, unit: "m", unitPrice: 185 },
+      { name: "Wsporniki montażowe", quantity: 24, unit: "szt", unitPrice: 18 },
+      { name: "Robocizna montażowa", quantity: 8, unit: "h", unitPrice: 120 },
     ],
   },
   {
@@ -95,9 +95,9 @@ const projects: Project[] = [
     deliveryDate: "25 Mar 2025",
     completionDate: "25 Mar 2025",
     items: [
-      { name: "Concrete blocks B20", quantity: 400, unit: "pcs", unitPrice: 4.5 },
-      { name: "Sand bags 25kg", quantity: 60, unit: "bags", unitPrice: 12 },
-      { name: "Delivery fee", quantity: 1, unit: "flat", unitPrice: 350 },
+      { name: "Bloczki betonowe B20", quantity: 400, unit: "szt", unitPrice: 4.5 },
+      { name: "Worki z piaskiem 25 kg", quantity: 60, unit: "szt", unitPrice: 12 },
+      { name: "Opłata za dostawę", quantity: 1, unit: "ryczałt", unitPrice: 350 },
     ],
   },
   {
@@ -115,9 +115,9 @@ const projects: Project[] = [
     deliveryDate: "30 Mar 2025",
     completionDate: "1 Apr 2025",
     items: [
-      { name: "Window frame 140×120", quantity: 3, unit: "pcs", unitPrice: 640 },
-      { name: "Insulation foam", quantity: 6, unit: "cans", unitPrice: 22 },
-      { name: "Installation labour", quantity: 6, unit: "h", unitPrice: 120 },
+      { name: "Rama okienna 140×120", quantity: 3, unit: "szt", unitPrice: 640 },
+      { name: "Piana izolacyjna", quantity: 6, unit: "szt", unitPrice: 22 },
+      { name: "Robocizna montażowa", quantity: 6, unit: "h", unitPrice: 120 },
     ],
   },
 ]
@@ -142,18 +142,20 @@ function IconRow({
   icon,
   label,
   children,
+  className,
 }: {
   icon: IconSvgElement
   label: string
   children: React.ReactNode
+  className?: string
 }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      <div className="flex w-40 shrink-0 items-center gap-2.5">
+    <div className={cn("flex items-center justify-between px-4 py-3", className)}>
+      <div className="flex items-center gap-2.5">
         <HugeiconsIcon icon={icon} size={14} className="shrink-0 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">{label}</span>
       </div>
-      <div className="flex flex-1 justify-end text-sm font-medium text-foreground">
+      <div className="text-sm font-medium text-foreground">
         {children}
       </div>
     </div>
@@ -178,7 +180,7 @@ function ProjectDialog({ project }: { project: Project }) {
         <p className="text-sm font-semibold text-foreground">Szczegóły realizacji</p>
         <DialogClose asChild>
           <Button variant="ghost" size="icon-sm">
-            <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
+            <HugeiconsIcon icon={Cancel01Icon} data-icon strokeWidth={2} />
           </Button>
         </DialogClose>
       </div>
@@ -189,21 +191,24 @@ function ProjectDialog({ project }: { project: Project }) {
         {/* Hero — total order value */}
         <div className="rounded-xl bg-card px-5 py-4">
           <p className="mb-1.5 text-xs text-muted-foreground">Wartość zamówienia</p>
-          <p className="text-4xl font-bold tracking-tight text-foreground">
-            {wholeFormatted}
-            <span className="text-2xl font-semibold text-muted-foreground">,{cents} zł</span>
+          <p className="text-2xl font-semibold text-muted-foreground">
+            {wholeFormatted},{cents} zł
           </p>
         </div>
 
-        {/* Project details — icon rows */}
-        <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
+        {/* Offer info + status — borders added manually to skip line after Numer oferty */}
+        <div className="overflow-hidden rounded-xl bg-card">
           <IconRow icon={Invoice01Icon} label="Numer oferty">{project.offerNumber}</IconRow>
-          <IconRow icon={Wrench01Icon} label="Rodzaj prac">{project.type}</IconRow>
-          <IconRow icon={CheckmarkCircle01Icon} label="Status">
+          <IconRow icon={CheckmarkCircle01Icon} label="Status" className="border-t border-border">
             <StatusBadge status={project.status} />
           </IconRow>
+          <IconRow icon={Wrench01Icon} label="Rodzaj prac" className="border-t border-border">{project.type}</IconRow>
+        </div>
+
+        {/* Dates */}
+        <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
           <IconRow icon={Calendar01Icon} label="Data zamówienia">{project.orderDate}</IconRow>
-          <IconRow icon={CreditCardIcon} label="Termin płatności">{project.paymentDue}</IconRow>
+          <IconRow icon={CreditCardIcon} label="Termin płatności" className="pb-5">{project.paymentDue}</IconRow>
           <IconRow icon={DeliveryTruck01Icon} label="Data dostawy">{project.deliveryDate}</IconRow>
           <IconRow icon={Flag01Icon} label="Data realizacji">{project.completionDate}</IconRow>
         </div>
@@ -211,7 +216,7 @@ function ProjectDialog({ project }: { project: Project }) {
         {/* Company + addresses */}
         <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
           <IconRow icon={Building01Icon} label="Firma">{project.companyName}</IconRow>
-          <IconRow icon={HashtagIcon} label="NIP">{project.nip}</IconRow>
+          <IconRow icon={HashtagIcon} label="NIP" className="pb-5">{project.nip}</IconRow>
           <IconRow icon={Location01Icon} label="Adres firmy">{project.companyAddress}</IconRow>
           <IconRow icon={Location01Icon} label="Adres montażu">{project.address}</IconRow>
         </div>
@@ -249,13 +254,13 @@ function ProjectDialog({ project }: { project: Project }) {
       <div className="flex items-center justify-between border-t border-border px-5 py-4">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon-sm">
-            <HugeiconsIcon icon={MoreHorizontalIcon} size={15} />
+            <HugeiconsIcon icon={MoreHorizontalIcon} data-icon />
           </Button>
           <Button variant="ghost" size="icon-sm">
-            <HugeiconsIcon icon={Share01Icon} size={15} />
+            <HugeiconsIcon icon={Share01Icon} data-icon />
           </Button>
           <Button variant="ghost" size="icon-sm">
-            <HugeiconsIcon icon={Download01Icon} size={15} />
+            <HugeiconsIcon icon={Download01Icon} data-icon />
           </Button>
         </div>
         <Button variant="outline" size="lg">
@@ -277,7 +282,7 @@ export function CurrentProjects() {
         <div className="flex items-center justify-between mb-4">
           <p className="text-base font-semibold text-foreground">Aktualne realizacje</p>
           <Link
-            href="/projects"
+            href="/orders"
             className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             Wszystkie

@@ -11,10 +11,10 @@ import {
   Invoice01Icon,
   ShoppingCart01Icon,
   Calendar01Icon,
-  UserAdd01Icon,
-  DeliveryTruck01Icon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
+import { ScheduleTransportDialog } from "@/components/ScheduleTransportDialog"
+import { AddCustomerDialog } from "@/components/AddCustomerDialog"
 import { cn } from "@/lib/utils"
 
 const stats: { title: string; value: string; note: string; icon: IconSvgElement }[] = [
@@ -74,11 +74,11 @@ function StatCard({
 
 export default function Page() {
   return (
-    <div className="flex h-full flex-col gap-8 p-8">
+    <div className="flex h-full flex-col gap-6 p-4 md:gap-8 md:p-8">
       <PageSetup title="Dashboard" icon={Home01Icon} />
 
-      {/* Welcome header */}
-      <div className="flex items-center justify-between gap-4">
+      {/* Welcome header — stacks vertically on mobile */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dzień dobry, Jan!</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -86,19 +86,13 @@ export default function Page() {
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="lg">
-            <HugeiconsIcon icon={UserAdd01Icon} data-icon="inline-start" />
-            Dodaj klienta
-          </Button>
-          <Button variant="default" size="lg">
-            <HugeiconsIcon icon={DeliveryTruck01Icon} data-icon="inline-start" />
-            Zaplanuj transport
-          </Button>
+          <AddCustomerDialog />
+          <ScheduleTransportDialog />
         </div>
       </div>
 
-      {/* Stats row — first card uses Minto-style redesign, rest use standard StatCard */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      {/* Stats row — 1 col on xs, 2 on sm, 4 on lg */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <ActiveProjectsCard />
         {stats.slice(1).map((stat) => (
           <StatCard key={stat.title} {...stat} />
@@ -106,13 +100,12 @@ export default function Page() {
       </div>
 
       {/* Projects left (wider), Offers + Shipments stacked on the right.
-          Grid stretches both columns to equal height — the end-of-list
-          indicator in CurrentProjects fills whatever space remains. */}
-      <div className="grid grid-cols-[3fr_2fr] gap-8">
+          Stacks vertically on tablet and below, side-by-side on desktop. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr] lg:gap-8">
         <div className="flex flex-col">
           <CurrentProjects />
         </div>
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6 lg:gap-8">
           <PendingOffers />
           <CurrentShipments />
         </div>

@@ -6,9 +6,13 @@ import { TopBar } from "@/components/TopBar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { UserProvider } from "@/components/UserContext"
+import { ShipmentsProvider } from "@/components/ShipmentsContext"
+import { CustomersProvider } from "@/components/CustomersContext"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
+    <CustomersProvider>
+    <ShipmentsProvider>
     <UserProvider>
     <TooltipProvider>
     <SidebarProvider>
@@ -17,10 +21,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* border zamiast ring — ring (box-shadow) jest poza elementem i przykrywany przez fixed sidebar po lewej */}
       <div className="flex flex-1 flex-col min-w-0 my-3 mr-3 rounded-xl overflow-hidden bg-surface border border-border">
         <TopBar />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </SidebarProvider>
     </TooltipProvider>
     </UserProvider>
+    </ShipmentsProvider>
+    </CustomersProvider>
   )
 }

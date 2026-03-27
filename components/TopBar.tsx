@@ -41,7 +41,7 @@ export function TopBar() {
       <div className="flex items-center gap-2">
         <Button variant="outline" size="lg">
           <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />
-          New offer
+          Nowa oferta
         </Button>
 
         {/* Visual divider between action and utility icons */}
