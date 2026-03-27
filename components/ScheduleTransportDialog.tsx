@@ -33,6 +33,7 @@ import {
   File01Icon,
   Calendar01Icon,
 } from "@hugeicons/core-free-icons"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useShipments, type ShipmentStatus } from "@/components/ShipmentsContext"
 
@@ -128,6 +129,7 @@ export function ScheduleTransportDialog() {
       trackingId: form.trackingId || undefined,
     })
     handleOpenChange(false)
+    toast.success("Transport został zaplanowany.")
   }
 
   // Format date for display in the trigger button (Polish locale)

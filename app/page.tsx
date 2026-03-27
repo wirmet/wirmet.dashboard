@@ -38,7 +38,7 @@ function ActiveProjectsCard() {
         <p className="text-sm text-muted-foreground">Aktualne realizacje</p>
         <HugeiconsIcon icon={Folder01Icon} size={15} className="text-muted-foreground" />
       </div>
-      <div className="mx-3 mb-2 rounded-xl bg-card p-3">
+      <div className="mx-3 mb-2 rounded-xl bg-white dark:bg-card p-3">
         <p className="text-2xl font-bold text-foreground">3</p>
         <p className={cn("mt-1 text-xs", noteClass("+1 w tym tygodniu"))}>+1 w tym tygodniu</p>
       </div>
@@ -63,7 +63,7 @@ function StatCard({
         <p className="text-sm text-muted-foreground">{title}</p>
         <HugeiconsIcon icon={icon} size={15} className="text-muted-foreground" />
       </div>
-      <div className="mx-3 mb-2 rounded-xl bg-card p-3">
+      <div className="mx-3 mb-2 rounded-xl bg-white dark:bg-card p-3">
         <p className="text-2xl font-bold text-foreground">{value}</p>
         <p className={cn("mt-1 text-xs", noteClass(note))}>{note}</p>
       </div>

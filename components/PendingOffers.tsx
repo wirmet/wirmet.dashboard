@@ -266,48 +266,52 @@ function OfferDialog({ offer }: { offer: PendingOffer }) {
   )
 }
 
-export function PendingOffers() {
-  const [selected, setSelected] = useState<PendingOffer | null>(null)
+// Each offer row owns its own Dialog state — no shared selected state
+function OfferRow({ offer }: { offer: PendingOffer }) {
+  const [open, setOpen] = useState(false)
 
   return (
     <>
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-semibold text-foreground">Oferty w toku</p>
-          <Button variant="outline" size="sm" asChild className="rounded-full">
-            <Link href="/offers">
-              Wszystkie
-              <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
-            </Link>
-          </Button>
+      <div
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 cursor-pointer transition-colors hover:bg-muted/30"
+      >
+        <div className={cn("size-2 shrink-0 rounded-full", dotColor[offer.status])} />
+        <div className="flex-1 min-w-0">
+          <p className="truncate text-sm font-medium text-foreground">{offer.company}</p>
+          <p className="text-xs text-muted-foreground">{offer.number} · {offer.created}</p>
         </div>
-
-        <div className="flex flex-col gap-2">
-          {offers.map((offer) => (
-            <div
-              key={offer.number}
-              onClick={() => setSelected(offer)}
-              className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 cursor-pointer transition-colors hover:bg-muted/30"
-            >
-              <div className={cn("size-2 shrink-0 rounded-full", dotColor[offer.status])} />
-              <div className="flex-1 min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">{offer.company}</p>
-                <p className="text-xs text-muted-foreground">{offer.number} · {offer.created}</p>
-              </div>
-              <Badge variant="outline" className={cn("shrink-0 text-[11px]", badgeClass[offer.status])}>
-                {offer.status}
-              </Badge>
-            </div>
-          ))}
-        </div>
+        <Badge variant="outline" className={cn("shrink-0 text-[11px]", badgeClass[offer.status])}>
+          {offer.status}
+        </Badge>
       </div>
 
-      <Dialog
-        open={selected !== null}
-        onOpenChange={(open) => { if (!open) setSelected(null) }}
-      >
-        {selected && <OfferDialog key={selected.number} offer={selected} />}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <OfferDialog offer={offer} />
       </Dialog>
     </>
+  )
+}
+
+export function PendingOffers() {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-semibold text-foreground">Oferty w toku</p>
+        <Link
+          href="/offers"
+          className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Wszystkie
+          <HugeiconsIcon icon={ArrowRight01Icon} size={12} />
+        </Link>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {offers.map((offer) => (
+          <OfferRow key={offer.number} offer={offer} />
+        ))}
+      </div>
+    </div>
   )
 }

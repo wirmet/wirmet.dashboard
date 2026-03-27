@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { TopBarProvider } from "@/components/TopBarContext"
 import { AppShell } from "@/components/AppShell"
 import { cn } from "@/lib/utils"
+import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
@@ -34,6 +35,7 @@ export default function RootLayout({
           <TopBarProvider>
             <AppShell>{children}</AppShell>
           </TopBarProvider>
+          <Toaster position="bottom-center" />
         </ThemeProvider>
       </body>
     </html>

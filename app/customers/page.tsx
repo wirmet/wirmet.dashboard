@@ -1,9 +1,14 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { PageSetup } from "@/components/PageSetup"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -26,7 +31,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -47,6 +60,7 @@ import {
   UserIcon,
   ArrowUp01Icon,
   ArrowDown01Icon,
+  ArrowDown02Icon,
   MoreVerticalIcon,
   EyeIcon,
   PencilEdit01Icon,
@@ -64,9 +78,10 @@ import {
 import { cn } from "@/lib/utils"
 import { useCustomers, type Customer } from "@/components/CustomersContext"
 import { AddCustomerDialog } from "@/components/AddCustomerDialog"
+import { toast } from "sonner"
 
 type SortDirection = "asc" | "desc"
-type SortColumn = "name" | "company" | "nip" | "address" | "contact" | "phone" | "email"
+type SortColumn = "name" | "company" | "nip" | "contact" | "phone" | "email"
 
 // — Mock relational data —
 
@@ -119,62 +134,58 @@ const mockShipments: CustomerShipment[] = [
   { id: "sh12", customerId: "6", label: "Sprzęt pomiarowy — wypożyczenie",         status: "Delivered",  date: "2025-01-24" },
 ]
 
+// Opacity-based colors — work in both light and dark mode
 const offerStatusStyle: Record<CustomerOffer["status"], string> = {
-  Accepted: "bg-green-50 text-green-700 border-green-200",
-  Sent:     "bg-blue-50 text-blue-700 border-blue-200",
-  Pending:  "bg-amber-50 text-amber-700 border-amber-200",
-  Rejected: "bg-red-50 text-red-600 border-red-200",
+  Accepted: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  Sent:     "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  Pending:  "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  Rejected: "bg-red-500/10 text-red-400 border-red-500/20",
 }
 const offerAccentColor: Record<CustomerOffer["status"], string> = {
-  Accepted: "bg-green-400",
+  Accepted: "bg-emerald-400",
   Sent:     "bg-blue-400",
   Pending:  "bg-amber-400",
-  Rejected: "bg-red-300",
+  Rejected: "bg-red-400",
 }
 const projectStatusStyle: Record<CustomerProject["status"], string> = {
-  "In progress": "bg-blue-50 text-blue-700 border-blue-200",
-  "Completed":   "bg-green-50 text-green-700 border-green-200",
-  "On hold":     "bg-zinc-100 text-zinc-500 border-zinc-200",
+  "In progress": "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  "Completed":   "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  "On hold":     "bg-zinc-500/10 text-muted-foreground border-zinc-500/20",
 }
 const shipmentStatusStyle: Record<CustomerShipment["status"], string> = {
-  Delivered:   "bg-green-50 text-green-700 border-green-200",
-  "In transit":"bg-blue-50 text-blue-700 border-blue-200",
-  Pending:     "bg-zinc-100 text-zinc-500 border-zinc-200",
+  Delivered:    "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  "In transit": "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  Pending:      "bg-zinc-500/10 text-muted-foreground border-zinc-500/20",
 }
 const shipmentAccentColor: Record<CustomerShipment["status"], string> = {
-  Delivered:   "bg-green-400",
-  "In transit":"bg-blue-400",
-  Pending:     "bg-zinc-300",
+  Delivered:    "bg-emerald-400",
+  "In transit": "bg-blue-400",
+  Pending:      "bg-muted-foreground/40",
+}
+
+// Deterministic soft avatar color based on first character
+const avatarColors = [
+  "bg-blue-500/10 text-blue-400",
+  "bg-violet-500/10 text-violet-400",
+  "bg-amber-500/10 text-amber-400",
+  "bg-emerald-500/10 text-emerald-500",
+  "bg-rose-500/10 text-rose-400",
+  "bg-cyan-500/10 text-cyan-400",
+]
+function avatarColor(name: string) {
+  return avatarColors[name.charCodeAt(0) % avatarColors.length]
 }
 
 function initials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
+  return name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
 }
 
-// Deterministic soft background for each avatar based on name
-const avatarColors = [
-  "bg-blue-100 text-blue-700",
-  "bg-violet-100 text-violet-700",
-  "bg-amber-100 text-amber-700",
-  "bg-green-100 text-green-700",
-  "bg-rose-100 text-rose-700",
-  "bg-cyan-100 text-cyan-700",
-]
-function avatarColor(name: string) {
-  const idx = name.charCodeAt(0) % avatarColors.length
-  return avatarColors[idx]
-}
+const PAGE_SIZE = 16
 
 const columns: { key: SortColumn; label: string }[] = [
   { key: "name",    label: "Client" },
   { key: "company", label: "Company" },
   { key: "nip",     label: "NIP" },
-  { key: "address", label: "Address" },
   { key: "contact", label: "Contact" },
   { key: "phone",   label: "Phone" },
   { key: "email",   label: "Email" },
@@ -188,31 +199,18 @@ function SortIcon({ column, sortColumn, sortDirection }: {
   const isActive = sortColumn === column
   return (
     <span className="flex flex-col gap-px">
-      <HugeiconsIcon
-        icon={ArrowUp01Icon}
-        size={10}
-        className={isActive && sortDirection === "asc" ? "text-zinc-700" : "text-zinc-400"}
-      />
-      <HugeiconsIcon
-        icon={ArrowDown01Icon}
-        size={10}
-        className={isActive && sortDirection === "desc" ? "text-zinc-700" : "text-zinc-400"}
-      />
+      <HugeiconsIcon icon={ArrowUp01Icon} size={10} className={isActive && sortDirection === "asc" ? "text-foreground" : "text-muted-foreground/40"} />
+      <HugeiconsIcon icon={ArrowDown01Icon} size={10} className={isActive && sortDirection === "desc" ? "text-foreground" : "text-muted-foreground/40"} />
     </span>
   )
 }
 
-const selectClass = "h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-600 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-200 appearance-none pr-8 cursor-pointer"
-const selectChevron = {
-  backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
-  backgroundRepeat: "no-repeat" as const,
-  backgroundPosition: "right 10px center",
-}
-
 export default function CustomersPage() {
-  const { customers, addCustomer, updateCustomer, deleteCustomer } = useCustomers()
+  const { customers, updateCustomer, deleteCustomer } = useCustomers()
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
+  const [search, setSearch] = useState("")
+  const [page, setPage] = useState(1)
   const [viewCustomer, setViewCustomer] = useState<Customer | null>(null)
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null)
@@ -220,6 +218,8 @@ export default function CustomersPage() {
   const emptyForm = { name: "", company: "", nip: "", address: "", contact: "", phone: "", email: "" }
   const [editForm, setEditForm] = useState(emptyForm)
   const [editNameError, setEditNameError] = useState(false)
+
+  useEffect(() => { setPage(1) }, [search, sortColumn, sortDirection])
 
   function handleEditOpen(customer: Customer) {
     setEditCustomer(customer)
@@ -235,13 +235,10 @@ export default function CustomersPage() {
   }
 
   function handleEditSubmit() {
-    if (!editForm.name.trim()) {
-      setEditNameError(true)
-      return
-    }
+    if (!editForm.name.trim()) { setEditNameError(true); return }
     updateCustomer(editCustomer!.id, editForm)
-    handleEditOpenChange(false)
     setEditCustomer(null)
+    toast.success("Dane klienta zostały zaktualizowane.")
   }
 
   function handleSort(column: SortColumn) {
@@ -253,16 +250,30 @@ export default function CustomersPage() {
     }
   }
 
-  const sorted = useMemo(() => {
-    if (!sortColumn) return customers
-    return [...customers].sort((a, b) => {
+  const filtered = useMemo(() => {
+    let rows = customers
+    if (search) {
+      const q = search.toLowerCase()
+      rows = rows.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.company.toLowerCase().includes(q) ||
+          c.email.toLowerCase().includes(q) ||
+          c.phone.toLowerCase().includes(q)
+      )
+    }
+    if (!sortColumn) return rows
+    return [...rows].sort((a, b) => {
       const valA = a[sortColumn].toLowerCase()
       const valB = b[sortColumn].toLowerCase()
       if (valA < valB) return sortDirection === "asc" ? -1 : 1
       if (valA > valB) return sortDirection === "asc" ? 1 : -1
       return 0
     })
-  }, [customers, sortColumn, sortDirection])
+  }, [customers, search, sortColumn, sortDirection])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   // — Customer detail full-width view —
   if (viewCustomer) {
@@ -274,16 +285,16 @@ export default function CustomersPage() {
       <>
         <PageSetup title={viewCustomer.name} icon={UserIcon} />
 
-        <div className="p-8 space-y-6">
+        <div className="p-8 flex flex-col gap-6">
 
           {/* Back link */}
           <Button
             variant="ghost"
             size="lg"
             onClick={() => setViewCustomer(null)}
-            className="px-0 text-zinc-400 hover:bg-transparent hover:text-zinc-700"
+            className="px-0 w-fit text-muted-foreground hover:bg-transparent hover:text-foreground"
           >
-            <HugeiconsIcon icon={ArrowLeft01Icon} size={14} />
+            <HugeiconsIcon icon={ArrowLeft01Icon} data-icon="inline-start" />
             Customers
           </Button>
 
@@ -291,34 +302,26 @@ export default function CustomersPage() {
           <div className="grid grid-cols-3 gap-6 items-stretch">
 
             {/* Left card: identity + contact details */}
-            <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden [&_[data-slot=table-container]]:overflow-x-visible">
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
 
               {/* Avatar + name + edit button */}
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-zinc-100">
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
                 <Avatar className="size-10 shrink-0">
                   <AvatarFallback className={cn("text-sm font-medium", avatarColor(viewCustomer.name))}>
                     {initials(viewCustomer.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-zinc-900 truncate">{viewCustomer.name}</p>
-                  {viewCustomer.company && <p className="text-xs text-zinc-400 truncate mt-0.5">{viewCustomer.company}</p>}
+                  <p className="text-sm font-semibold text-foreground truncate">{viewCustomer.name}</p>
+                  {viewCustomer.company && <p className="text-xs text-muted-foreground truncate mt-0.5">{viewCustomer.company}</p>}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={() => { setViewCustomer(null); handleEditOpen(viewCustomer) }}
-                  >
-                    <HugeiconsIcon icon={PencilEdit01Icon} size={12} />
+                  <Button variant="outline" size="lg" onClick={() => { setViewCustomer(null); handleEditOpen(viewCustomer) }}>
+                    <HugeiconsIcon icon={PencilEdit01Icon} data-icon="inline-start" />
                     Edit
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="lg"
-                    onClick={() => setDeleteTarget(viewCustomer)}
-                  >
-                    <HugeiconsIcon icon={Delete01Icon} size={12} />
+                  <Button variant="destructive" size="lg" onClick={() => setDeleteTarget(viewCustomer)}>
+                    <HugeiconsIcon icon={Delete01Icon} data-icon="inline-start" />
                     Delete
                   </Button>
                 </div>
@@ -337,11 +340,11 @@ export default function CustomersPage() {
                   ].map((r) => (
                     <TableRow key={r.label}>
                       <TableCell className="pl-5 w-10 pr-0">
-                        <HugeiconsIcon icon={r.icon} size={14} className="text-zinc-300" />
+                        <HugeiconsIcon icon={r.icon} size={14} className="text-muted-foreground/40" />
                       </TableCell>
-                      <TableCell className="w-28 text-xs text-zinc-400 font-medium">{r.label}</TableCell>
-                      <TableCell className={cn("text-xs text-zinc-800 break-all", r.mono && "font-mono")}>
-                        {r.value || <span className="text-zinc-300">—</span>}
+                      <TableCell className="w-28 text-xs text-muted-foreground font-medium">{r.label}</TableCell>
+                      <TableCell className={cn("text-xs text-foreground break-all", r.mono && "font-mono")}>
+                        {r.value || <span className="text-muted-foreground/40">—</span>}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -350,13 +353,13 @@ export default function CustomersPage() {
             </div>
 
             {/* Projects — col-span-2 */}
-            <Card className="col-span-2 rounded-xl border border-zinc-200 bg-white ring-0 gap-0 py-0 overflow-hidden">
-              <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Projects</span>
-                <Button variant="ghost" size="sm" className="text-zinc-400 hover:bg-transparent hover:text-zinc-700">View all</Button>
+            <Card className="col-span-2 rounded-xl border border-border bg-card ring-0 gap-0 py-0 overflow-hidden">
+              <div className="flex items-center justify-between border-b border-border px-5 py-3">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Projects</span>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:bg-transparent hover:text-foreground">View all</Button>
               </div>
               {projects.length === 0
-                ? <p className="px-5 py-8 text-center text-sm text-zinc-400">No projects yet.</p>
+                ? <p className="px-5 py-8 text-center text-sm text-muted-foreground">No projects yet.</p>
                 : <Table className="table-fixed">
                     <colgroup>
                       <col />
@@ -375,11 +378,11 @@ export default function CustomersPage() {
                     <TableBody>
                       {projects.map((p) => (
                         <TableRow key={p.id}>
-                          <TableCell className="pl-5 font-medium text-zinc-900 truncate">{p.name}</TableCell>
-                          <TableCell className="text-zinc-500">{p.date}</TableCell>
-                          <TableCell className="text-zinc-700 font-medium">{p.value}</TableCell>
+                          <TableCell className="pl-5 font-medium text-foreground truncate">{p.name}</TableCell>
+                          <TableCell className="text-muted-foreground">{p.date}</TableCell>
+                          <TableCell className="text-foreground font-medium">{p.value}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={`text-[11px] ${projectStatusStyle[p.status]}`}>{p.status}</Badge>
+                            <Badge variant="outline" className={cn("text-[11px]", projectStatusStyle[p.status])}>{p.status}</Badge>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -393,34 +396,29 @@ export default function CustomersPage() {
           <div className="grid grid-cols-2 gap-6 items-start">
 
             {/* Offers */}
-            <Card className="rounded-xl border border-zinc-200 bg-white ring-0 gap-0 py-0 overflow-hidden">
-              <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Offers</span>
-                <Button variant="ghost" size="sm" className="text-zinc-400 hover:bg-transparent hover:text-zinc-700">View all</Button>
+            <Card className="rounded-xl border border-border bg-card ring-0 gap-0 py-0 overflow-hidden">
+              <div className="flex items-center justify-between border-b border-border px-5 py-3">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Offers</span>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:bg-transparent hover:text-foreground">View all</Button>
               </div>
               {offers.length === 0
-                ? <p className="px-5 py-8 text-center text-sm text-zinc-400">No offers yet.</p>
+                ? <p className="px-5 py-8 text-center text-sm text-muted-foreground">No offers yet.</p>
                 : <div>
                     {offers.map((o, i) => (
                       <div
                         key={o.id}
                         className={cn(
-                          "flex items-center gap-4 px-4 py-3 hover:bg-zinc-50 transition-colors",
-                          i !== offers.length - 1 && "border-b border-zinc-100"
+                          "flex items-center gap-4 px-4 py-3 hover:bg-muted/50 transition-colors",
+                          i !== offers.length - 1 && "border-b border-border"
                         )}
                       >
-                        {/* Status accent bar */}
                         <div className={cn("h-8 w-1 shrink-0 rounded-full", offerAccentColor[o.status])} />
-
-                        {/* Name + date */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-zinc-900 truncate">{o.name}</p>
-                          <p className="text-xs text-zinc-400 mt-0.5">{o.date}</p>
+                          <p className="text-sm font-medium text-foreground truncate">{o.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{o.date}</p>
                         </div>
-
-                        {/* Value + badge */}
                         <div className="shrink-0 flex items-center gap-2.5">
-                          <span className="text-xs font-medium text-zinc-600">{o.value}</span>
+                          <span className="text-xs font-medium text-muted-foreground">{o.value}</span>
                           <Badge variant="outline" className={cn("text-[11px]", offerStatusStyle[o.status])}>
                             {o.status}
                           </Badge>
@@ -432,32 +430,27 @@ export default function CustomersPage() {
             </Card>
 
             {/* Shipments */}
-            <Card className="rounded-xl border border-zinc-200 bg-white ring-0 gap-0 py-0 overflow-hidden">
-              <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">Shipments</span>
-                <Button variant="ghost" size="sm" className="text-zinc-400 hover:bg-transparent hover:text-zinc-700">View all</Button>
+            <Card className="rounded-xl border border-border bg-card ring-0 gap-0 py-0 overflow-hidden">
+              <div className="flex items-center justify-between border-b border-border px-5 py-3">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Shipments</span>
+                <Button variant="ghost" size="sm" className="text-muted-foreground hover:bg-transparent hover:text-foreground">View all</Button>
               </div>
               {shipments.length === 0
-                ? <p className="px-5 py-8 text-center text-sm text-zinc-400">No shipments yet.</p>
+                ? <p className="px-5 py-8 text-center text-sm text-muted-foreground">No shipments yet.</p>
                 : <div>
                     {shipments.map((s, i) => (
                       <div
                         key={s.id}
                         className={cn(
-                          "flex items-center gap-4 px-4 py-3 hover:bg-zinc-50 transition-colors",
-                          i !== shipments.length - 1 && "border-b border-zinc-100"
+                          "flex items-center gap-4 px-4 py-3 hover:bg-muted/50 transition-colors",
+                          i !== shipments.length - 1 && "border-b border-border"
                         )}
                       >
-                        {/* Status accent bar */}
                         <div className={cn("h-8 w-1 shrink-0 rounded-full", shipmentAccentColor[s.status])} />
-
-                        {/* Label + date */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-zinc-900 truncate">{s.label}</p>
-                          <p className="text-xs text-zinc-400 mt-0.5">{s.date}</p>
+                          <p className="text-sm font-medium text-foreground truncate">{s.label}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{s.date}</p>
                         </div>
-
-                        {/* Badge */}
                         <Badge variant="outline" className={cn("shrink-0 text-[11px]", shipmentStatusStyle[s.status])}>
                           {s.status}
                         </Badge>
@@ -470,12 +463,9 @@ export default function CustomersPage() {
 
         </div>
 
-        {/* Delete Customer confirmation (detail view) */}
-        <AlertDialog
-          open={!!deleteTarget}
-          onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
-        >
-          <AlertDialogContent size="sm" style={{ "--background": "oklch(1 0 0)", "--foreground": "oklch(0.145 0 0)", "--muted-foreground": "oklch(0.556 0 0)", "--border": "oklch(0.922 0 0)" } as React.CSSProperties}>
+        {/* Delete confirmation (detail view) */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+          <AlertDialogContent size="sm">
             <AlertDialogHeader>
               <AlertDialogMedia className="bg-destructive/10 text-destructive">
                 <HugeiconsIcon icon={Delete01Icon} size={16} />
@@ -493,6 +483,7 @@ export default function CustomersPage() {
                   deleteCustomer(deleteTarget!.id)
                   setDeleteTarget(null)
                   setViewCustomer(null)
+                  toast.success("Klient został usunięty.")
                 }}
               >
                 Delete
@@ -501,41 +492,44 @@ export default function CustomersPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Edit modal available from detail view too */}
+        {/* Edit modal (detail view) */}
         <Dialog open={!!editCustomer} onOpenChange={handleEditOpenChange}>
-          <DialogContent className="sm:max-w-lg bg-white text-zinc-900" style={{ "--ring": "oklch(0.922 0 0)", "--border": "oklch(0.922 0 0)", "--muted-foreground": "oklch(0.556 0 0)" } as React.CSSProperties}>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle className="text-base font-semibold text-zinc-900">Edit Customer</DialogTitle>
+              <DialogTitle>Edit Customer</DialogTitle>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-x-4 gap-y-4 py-2">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-600">Full Name <span className="text-red-500">*</span></label>
-                <Input placeholder="John Smith" value={editForm.name} onChange={(e) => { setEditForm((f) => ({ ...f, name: e.target.value })); setEditNameError(false) }} className={cn("h-9 bg-white text-sm text-zinc-900 placeholder:text-zinc-400", editNameError ? "border-red-400" : "border-zinc-200")} />
-                {editNameError && <p className="text-[11px] text-red-500">Full name is required.</p>}
+                <label className="text-xs font-medium text-muted-foreground">Full Name <span className="text-destructive">*</span></label>
+                <Input placeholder="John Smith" value={editForm.name} onChange={(e) => { setEditForm((f) => ({ ...f, name: e.target.value })); setEditNameError(false) }} aria-invalid={editNameError || undefined} />
+                {editNameError && <p className="text-[11px] text-destructive">Full name is required.</p>}
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-600">Company Name</label>
-                <Input placeholder="Acme Ltd." value={editForm.company} onChange={(e) => setEditForm((f) => ({ ...f, company: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
+                <label className="text-xs font-medium text-muted-foreground">Company Name</label>
+                <Input placeholder="Acme Ltd." value={editForm.company} onChange={(e) => setEditForm((f) => ({ ...f, company: e.target.value }))} />
               </div>
               <div className="col-span-2 flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-600">Tax ID (NIP)</label>
-                <Input placeholder="PL 0000000000" value={editForm.nip} onChange={(e) => setEditForm((f) => ({ ...f, nip: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 font-mono placeholder:text-zinc-400" />
+                <label className="text-xs font-medium text-muted-foreground">Tax ID (NIP)</label>
+                <div className="flex gap-2">
+                  <Input placeholder="PL 0000000000" value={editForm.nip} onChange={(e) => setEditForm((f) => ({ ...f, nip: e.target.value }))} className="font-mono" />
+                  <Button variant="outline" size="lg" className="shrink-0">Fetch from GUS</Button>
+                </div>
               </div>
               <div className="col-span-2 flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-600">Address</label>
-                <Input placeholder="123 Main St, Warsaw" value={editForm.address} onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
+                <label className="text-xs font-medium text-muted-foreground">Address</label>
+                <Input placeholder="123 Main St, Warsaw" value={editForm.address} onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))} />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-600">Contact Person</label>
-                <Input placeholder="John Smith" value={editForm.contact} onChange={(e) => setEditForm((f) => ({ ...f, contact: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
+                <label className="text-xs font-medium text-muted-foreground">Contact Person</label>
+                <Input placeholder="John Smith" value={editForm.contact} onChange={(e) => setEditForm((f) => ({ ...f, contact: e.target.value }))} />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-600">Phone</label>
-                <Input placeholder="+48 600 000 000" value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
+                <label className="text-xs font-medium text-muted-foreground">Phone</label>
+                <Input placeholder="+48 600 000 000" value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} />
               </div>
               <div className="col-span-2 flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-zinc-600">Email</label>
-                <Input type="email" placeholder="john@company.com" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
+                <label className="text-xs font-medium text-muted-foreground">Email</label>
+                <Input type="email" placeholder="john@company.com" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} />
               </div>
             </div>
             <DialogFooter className="pt-2">
@@ -554,31 +548,48 @@ export default function CustomersPage() {
     <>
       <PageSetup title="Customers" icon={UserIcon} />
 
-      <div className="p-8">
-        {/* Filter bar */}
-        <div className="mb-4 flex items-center gap-2">
-          <select defaultValue="" className={selectClass} style={selectChevron}>
-            <option value="" disabled>Date Added</option>
-            <option>Newest first</option>
-            <option>Oldest first</option>
-          </select>
+      <div className="flex flex-col gap-4 p-8">
 
+        {/* Filter bar */}
+        <div className="flex shrink-0 items-center gap-2">
+
+          {/* Sort dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="lg">
+                Sort by
+                <HugeiconsIcon icon={ArrowDown02Icon} data-icon="inline-end" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-40">
+              <DropdownMenuItem onClick={() => { setSortColumn("name"); setSortDirection("asc") }}>Name A–Z</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setSortColumn("name"); setSortDirection("desc") }}>Name Z–A</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setSortColumn("company"); setSortDirection("asc") }}>Company A–Z</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => { setSortColumn(null) }}>Clear sort</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Search + add */}
           <div className="ml-auto flex items-center gap-2">
-            <div className="relative">
-              <HugeiconsIcon icon={Search01Icon} size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-              <Input
+            <InputGroup className="h-8 w-56">
+              <InputGroupAddon align="inline-start">
+                <HugeiconsIcon icon={Search01Icon} />
+              </InputGroupAddon>
+              <InputGroupInput
                 type="search"
-                placeholder="Search Customers..."
-                className="h-9 w-56 rounded-md border border-zinc-200 bg-white pl-8 pr-3 text-sm text-zinc-600 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                placeholder="Search customers..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
-            </div>
+            </InputGroup>
 
             <AddCustomerDialog />
           </div>
         </div>
 
         {/* Table */}
-        <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden [&_[data-slot=table-container]]:overflow-x-visible">
+        <div className="rounded-xl border border-border bg-card overflow-hidden [&_[data-slot=table-container]]:overflow-x-visible">
           <Table>
             <TableHeader>
               <TableRow>
@@ -587,7 +598,7 @@ export default function CustomersPage() {
                     key={col.key}
                     onClick={() => handleSort(col.key)}
                     className={cn(
-                      "cursor-pointer select-none hover:text-zinc-600 transition-colors",
+                      "cursor-pointer select-none hover:text-foreground transition-colors",
                       i === 0 && "pl-5"
                     )}
                   >
@@ -597,141 +608,140 @@ export default function CustomersPage() {
                     </div>
                   </TableHead>
                 ))}
-                {/* Actions column — not sortable */}
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sorted.map((c) => (
-                <TableRow key={c.id} className="cursor-pointer">
-                  {/* Client name with avatar */}
-                  <TableCell className="pl-5">
-                    <div className="flex items-center gap-2.5">
-                      <Avatar className={cn("size-7 text-xs font-medium", avatarColor(c.name))}>
-                        <AvatarFallback className={cn("text-xs font-medium", avatarColor(c.name))}>
-                          {initials(c.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium text-zinc-900">{c.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-zinc-600">{c.company}</TableCell>
-                  <TableCell className="font-mono text-zinc-400">{c.nip}</TableCell>
-                  <TableCell className="text-zinc-500">{c.address}</TableCell>
-                  <TableCell className="text-zinc-500">{c.contact}</TableCell>
-                  <TableCell className="text-zinc-500">{c.phone}</TableCell>
-                  <TableCell className="text-zinc-500">{c.email}</TableCell>
-                  {/* Actions */}
-                  <TableCell className="text-right pr-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-zinc-400 hover:text-zinc-600"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <HugeiconsIcon icon={MoreVerticalIcon} size={16} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                          align="end"
-                          className="w-36 border border-zinc-200"
-                          style={{
-                            "--popover": "oklch(1 0 0)",
-                            "--popover-foreground": "oklch(0.145 0 0)",
-                            "--accent": "oklch(0.97 0 0)",
-                            "--accent-foreground": "oklch(0.205 0 0)",
-                            "--border": "oklch(0.922 0 0)",
-                          } as React.CSSProperties}
-                        >
-                        <DropdownMenuItem onClick={() => setViewCustomer(c)}>
-                          <HugeiconsIcon icon={EyeIcon} size={14} />
-                          View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditOpen(c)}>
-                          <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem variant="destructive" onClick={() => setDeleteTarget(c)}>
-                          <HugeiconsIcon icon={Delete01Icon} size={14} />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {paginated.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length + 1} className="py-12 text-center text-sm text-muted-foreground">
+                    No customers found.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                paginated.map((c) => (
+                  <TableRow key={c.id} className="cursor-pointer" onClick={() => setViewCustomer(c)}>
+                    <TableCell className="pl-5">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="size-7">
+                          <AvatarFallback className={cn("text-xs font-medium", avatarColor(c.name))}>
+                            {initials(c.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium text-foreground">{c.name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{c.company}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{c.nip}</TableCell>
+                    <TableCell className="text-muted-foreground">{c.contact}</TableCell>
+                    <TableCell className="text-muted-foreground">{c.phone}</TableCell>
+                    <TableCell className="text-muted-foreground">{c.email}</TableCell>
+                    <TableCell className="text-right pr-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                            <HugeiconsIcon icon={MoreVerticalIcon} size={16} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setViewCustomer(c) }}>
+                            <HugeiconsIcon icon={EyeIcon} size={14} />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditOpen(c) }}>
+                            <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem variant="destructive" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c) }}>
+                            <HugeiconsIcon icon={Delete01Icon} size={14} />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        <div className="flex shrink-0 items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            {filtered.length === 0
+              ? "No results"
+              : <>Showing <span className="font-medium text-foreground">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of <span className="font-medium text-foreground">{filtered.length}</span> customers</>
+            }
+          </p>
+          <Pagination className="w-auto mx-0">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }}
+                  className={cn(page === 1 && "pointer-events-none opacity-40")}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <span className="px-3 text-xs text-muted-foreground">
+                  Page {page} of {totalPages}
+                </span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)) }}
+                  className={cn(page === totalPages && "pointer-events-none opacity-40")}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+
       </div>
-
-
 
       {/* Edit Customer modal */}
       <Dialog open={!!editCustomer} onOpenChange={handleEditOpenChange}>
-        <DialogContent
-          className="sm:max-w-lg bg-white text-zinc-900"
-          style={{
-            "--ring": "oklch(0.922 0 0)",
-            "--border": "oklch(0.922 0 0)",
-            "--muted-foreground": "oklch(0.556 0 0)",
-          } as React.CSSProperties}
-        >
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-zinc-900">Edit Customer</DialogTitle>
+            <DialogTitle>Edit Customer</DialogTitle>
           </DialogHeader>
-
           <div className="grid grid-cols-2 gap-x-4 gap-y-4 py-2">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Full Name <span className="text-red-500">*</span></label>
-              <Input
-                placeholder="John Smith"
-                value={editForm.name}
-                onChange={(e) => { setEditForm((f) => ({ ...f, name: e.target.value })); setEditNameError(false) }}
-                className={cn("h-9 bg-white text-sm text-zinc-900 placeholder:text-zinc-400", editNameError ? "border-red-400 focus:ring-red-200" : "border-zinc-200")}
-              />
-              {editNameError && <p className="text-[11px] text-red-500">Full name is required.</p>}
+              <label className="text-xs font-medium text-muted-foreground">Full Name <span className="text-destructive">*</span></label>
+              <Input placeholder="John Smith" value={editForm.name} onChange={(e) => { setEditForm((f) => ({ ...f, name: e.target.value })); setEditNameError(false) }} aria-invalid={editNameError || undefined} />
+              {editNameError && <p className="text-[11px] text-destructive">Full name is required.</p>}
             </div>
-
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Company Name</label>
-              <Input placeholder="Acme Ltd." value={editForm.company} onChange={(e) => setEditForm((f) => ({ ...f, company: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
+              <label className="text-xs font-medium text-muted-foreground">Company Name</label>
+              <Input placeholder="Acme Ltd." value={editForm.company} onChange={(e) => setEditForm((f) => ({ ...f, company: e.target.value }))} />
             </div>
-
             <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Tax ID (NIP)</label>
+              <label className="text-xs font-medium text-muted-foreground">Tax ID (NIP)</label>
               <div className="flex gap-2">
-                <Input placeholder="PL 0000000000" value={editForm.nip} onChange={(e) => setEditForm((f) => ({ ...f, nip: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400 font-mono" />
-                <Button variant="outline" size="lg" className="shrink-0">
-                  Fetch from GUS
-                </Button>
+                <Input placeholder="PL 0000000000" value={editForm.nip} onChange={(e) => setEditForm((f) => ({ ...f, nip: e.target.value }))} className="font-mono" />
+                <Button variant="outline" size="lg" className="shrink-0">Fetch from GUS</Button>
               </div>
             </div>
-
             <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Address</label>
-              <Input placeholder="123 Main St, Warsaw" value={editForm.address} onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
+              <label className="text-xs font-medium text-muted-foreground">Address</label>
+              <Input placeholder="123 Main St, Warsaw" value={editForm.address} onChange={(e) => setEditForm((f) => ({ ...f, address: e.target.value }))} />
             </div>
-
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Contact Person</label>
-              <Input placeholder="John Smith" value={editForm.contact} onChange={(e) => setEditForm((f) => ({ ...f, contact: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
+              <label className="text-xs font-medium text-muted-foreground">Contact Person</label>
+              <Input placeholder="John Smith" value={editForm.contact} onChange={(e) => setEditForm((f) => ({ ...f, contact: e.target.value }))} />
             </div>
-
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Phone</label>
-              <Input placeholder="+48 600 000 000" value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
+              <label className="text-xs font-medium text-muted-foreground">Phone</label>
+              <Input placeholder="+48 600 000 000" value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} />
             </div>
-
             <div className="col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-600">Email</label>
-              <Input type="email" placeholder="john@company.com" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="h-9 border-zinc-200 bg-white text-sm text-zinc-900 placeholder:text-zinc-400" />
+              <label className="text-xs font-medium text-muted-foreground">Email</label>
+              <Input type="email" placeholder="john@company.com" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} />
             </div>
           </div>
-
           <DialogFooter className="pt-2">
             <DialogClose asChild>
               <Button variant="outline" size="lg">Cancel</Button>
@@ -741,12 +751,9 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Customer confirmation (list view) */}
-      <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
-      >
-        <AlertDialogContent size="sm" style={{ "--background": "oklch(1 0 0)", "--foreground": "oklch(0.145 0 0)", "--muted-foreground": "oklch(0.556 0 0)", "--border": "oklch(0.922 0 0)" } as React.CSSProperties}>
+      {/* Delete Customer confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
             <AlertDialogMedia className="bg-destructive/10 text-destructive">
               <HugeiconsIcon icon={Delete01Icon} size={16} />
@@ -761,8 +768,9 @@ export default function CustomersPage() {
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
-                setCustomers((prev) => prev.filter((x) => x.id !== deleteTarget!.id))
+                deleteCustomer(deleteTarget!.id)
                 setDeleteTarget(null)
+                toast.success("Klient został usunięty.")
               }}
             >
               Delete

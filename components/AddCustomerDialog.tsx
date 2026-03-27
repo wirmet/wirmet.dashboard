@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { UserAdd01Icon } from "@hugeicons/core-free-icons"
+import { toast } from "sonner"
 import { useCustomers } from "@/components/CustomersContext"
 
 // Matches SelectTrigger size="lg" — h-9 px-3 text-sm, overrides Input's md:text-xs/relaxed
@@ -56,11 +57,12 @@ export function AddCustomerDialog() {
       email: form.email,
     })
     handleOpenChange(false)
+    toast.success("Klient został dodany.")
   }
 
   return (
     <>
-      <Button variant="outline" size="lg" onClick={() => setOpen(true)}>
+      <Button variant="default" size="lg" onClick={() => setOpen(true)}>
         <HugeiconsIcon icon={UserAdd01Icon} data-icon="inline-start" />
         Dodaj klienta
       </Button>

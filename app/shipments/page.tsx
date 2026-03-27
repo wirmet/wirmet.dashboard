@@ -1,10 +1,14 @@
 "use client"
 
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { PageSetup } from "@/components/PageSetup"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import {
   Table,
   TableBody,
@@ -15,6 +19,7 @@ import {
 } from "@/components/ui/table"
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -44,6 +49,7 @@ import {
   DeliveryTruck01Icon,
   ArrowUp01Icon,
   ArrowDown01Icon,
+  ArrowDown02Icon,
   MoreVerticalIcon,
   EyeIcon,
   PencilEdit01Icon,
@@ -52,28 +58,41 @@ import {
 import { cn } from "@/lib/utils"
 import { useShipments, type Shipment, type ShipmentStatus } from "@/components/ShipmentsContext"
 import { ScheduleTransportDialog } from "@/components/ScheduleTransportDialog"
+import { toast } from "sonner"
+
+const PAGE_SIZE = 16
 
 type SortDirection = "asc" | "desc"
 type SortColumn = "id" | "client" | "destination" | "carrier" | "date" | "status"
 
+const ALL_STATUSES: ShipmentStatus[] = [
+  "Nowe", "Przygotowywane", "Do wysłania", "Pending", "In transit", "Wstrzymane", "Delivered",
+]
+const STATUS_LABELS: Record<ShipmentStatus, string> = {
+  "Nowe": "Nowe", "Przygotowywane": "Przygotowywane", "Do wysłania": "Do wysłania",
+  "Pending": "Oczekuje", "In transit": "W drodze", "Wstrzymane": "Wstrzymane", "Delivered": "Dostarczone",
+}
+const ALL_CARRIERS = ["DPD", "DHL", "Geodis", "InPost", "GLS"]
+
+// Opacity-based colors — work in both light and dark mode
 const statusStyle: Record<ShipmentStatus, string> = {
-  "Nowe":           "bg-violet-50 text-violet-700 border-violet-200",
-  "Przygotowywane": "bg-amber-50 text-amber-700 border-amber-200",
-  "Do wysłania":    "bg-sky-50 text-sky-700 border-sky-200",
-  "Pending":        "bg-zinc-100 text-zinc-500 border-zinc-200",
-  "In transit":     "bg-blue-50 text-blue-700 border-blue-200",
-  "Wstrzymane":     "bg-red-50 text-red-700 border-red-200",
-  "Delivered":      "bg-green-50 text-green-700 border-green-200",
+  "Nowe":           "bg-violet-500/10 text-violet-400 border-violet-500/20",
+  "Przygotowywane": "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  "Do wysłania":    "bg-sky-500/10 text-sky-400 border-sky-500/20",
+  "Pending":        "bg-zinc-500/10 text-muted-foreground border-zinc-500/20",
+  "In transit":     "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  "Wstrzymane":     "bg-red-500/10 text-red-400 border-red-500/20",
+  "Delivered":      "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
 }
 
 const accentColor: Record<ShipmentStatus, string> = {
   "Nowe":           "bg-violet-400",
   "Przygotowywane": "bg-amber-400",
   "Do wysłania":    "bg-sky-400",
-  "Pending":        "bg-zinc-300",
+  "Pending":        "bg-muted-foreground/40",
   "In transit":     "bg-blue-400",
   "Wstrzymane":     "bg-red-400",
-  "Delivered":      "bg-green-400",
+  "Delivered":      "bg-emerald-400",
 }
 
 const columns: { key: SortColumn; label: string }[] = [
@@ -85,13 +104,6 @@ const columns: { key: SortColumn; label: string }[] = [
   { key: "status",      label: "Status" },
 ]
 
-const selectClass = "h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-600 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-200 appearance-none pr-8 cursor-pointer"
-const selectChevron = {
-  backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
-  backgroundRepeat: "no-repeat" as const,
-  backgroundPosition: "right 10px center",
-}
-
 function SortIcon({ column, sortColumn, sortDirection }: {
   column: SortColumn
   sortColumn: SortColumn | null
@@ -100,46 +112,23 @@ function SortIcon({ column, sortColumn, sortDirection }: {
   const isActive = sortColumn === column
   return (
     <span className="flex flex-col gap-px">
-      <HugeiconsIcon icon={ArrowUp01Icon} size={10} className={isActive && sortDirection === "asc" ? "text-zinc-700" : "text-zinc-400"} />
-      <HugeiconsIcon icon={ArrowDown01Icon} size={10} className={isActive && sortDirection === "desc" ? "text-zinc-700" : "text-zinc-400"} />
+      <HugeiconsIcon icon={ArrowUp01Icon} size={10} className={isActive && sortDirection === "asc" ? "text-foreground" : "text-muted-foreground/40"} />
+      <HugeiconsIcon icon={ArrowDown01Icon} size={10} className={isActive && sortDirection === "desc" ? "text-foreground" : "text-muted-foreground/40"} />
     </span>
   )
 }
 
-const TABLE_HEADER_HEIGHT = 41 // px — approximate height of the <thead> row
-const ROW_HEIGHT = 45           // px — approximate height of each <tbody> row
-
 export default function ShipmentsPage() {
-  const { shipments, addShipment, deleteShipment } = useShipments()
+  const { shipments, deleteShipment } = useShipments()
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
-  const [statusFilter, setStatusFilter] = useState("")
-  const [carrierFilter, setCarrierFilter] = useState("")
+  const [statusFilters, setStatusFilters] = useState<ShipmentStatus[]>([])
+  const [carrierFilters, setCarrierFilters] = useState<string[]>([])
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const [rowHeight, setRowHeight] = useState(ROW_HEIGHT)
-  const tableWrapperRef = useRef<HTMLDivElement>(null)
   const [deleteTarget, setDeleteTarget] = useState<Shipment | null>(null)
 
-  // Dynamically calculate how many rows fit and lock in that row height
-  useEffect(() => {
-    const el = tableWrapperRef.current
-    if (!el) return
-    const calculate = () => {
-      const available = el.clientHeight - TABLE_HEADER_HEIGHT
-      const rows = Math.max(1, Math.floor(available / ROW_HEIGHT))
-      setPageSize(rows)
-      setRowHeight(Math.floor(available / rows)) // exact height so rows fill the container
-    }
-    const observer = new ResizeObserver(calculate)
-    observer.observe(el)
-    calculate()
-    return () => observer.disconnect()
-  }, [])
-
-  // Reset to first page whenever filters or page size change
-  useEffect(() => { setPage(1) }, [statusFilter, carrierFilter, search, sortColumn, sortDirection, pageSize])
+  useEffect(() => { setPage(1) }, [statusFilters, carrierFilters, search, sortColumn, sortDirection])
 
   function handleSort(column: SortColumn) {
     if (sortColumn === column) {
@@ -150,10 +139,22 @@ export default function ShipmentsPage() {
     }
   }
 
+  function toggleStatus(status: ShipmentStatus) {
+    setStatusFilters((prev) =>
+      prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
+    )
+  }
+
+  function toggleCarrier(carrier: string) {
+    setCarrierFilters((prev) =>
+      prev.includes(carrier) ? prev.filter((c) => c !== carrier) : [...prev, carrier]
+    )
+  }
+
   const filtered = useMemo(() => {
     let rows = shipments
-    if (statusFilter) rows = rows.filter((s) => s.status === statusFilter)
-    if (carrierFilter) rows = rows.filter((s) => s.carrier === carrierFilter)
+    if (statusFilters.length > 0) rows = rows.filter((s) => statusFilters.includes(s.status))
+    if (carrierFilters.length > 0) rows = rows.filter((s) => carrierFilters.includes(s.carrier))
     if (search) {
       const q = search.toLowerCase()
       rows = rows.filter(
@@ -171,69 +172,108 @@ export default function ShipmentsPage() {
       if (valA > valB) return sortDirection === "asc" ? 1 : -1
       return 0
     })
-  }, [shipments, statusFilter, carrierFilter, search, sortColumn, sortDirection])
+  }, [shipments, statusFilters, carrierFilters, search, sortColumn, sortDirection])
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <>
       <PageSetup title="Shipments" icon={DeliveryTruck01Icon} />
 
-      <div className="flex h-full flex-col gap-4 p-8">
+      <div className="flex flex-col gap-4 p-8">
 
-        {/* Filter bar — fixed height */}
+        {/* Filter bar */}
         <div className="flex shrink-0 items-center gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className={selectClass}
-            style={selectChevron}
-          >
-            <option value="">All statuses</option>
-            <option value="Nowe">Nowe</option>
-            <option value="Przygotowywane">Przygotowywane</option>
-            <option value="Do wysłania">Do wysłania</option>
-            <option value="Pending">Oczekuje</option>
-            <option value="In transit">W drodze</option>
-            <option value="Wstrzymane">Wstrzymane</option>
-            <option value="Delivered">Dostarczone</option>
-          </select>
 
-          <select
-            value={carrierFilter}
-            onChange={(e) => setCarrierFilter(e.target.value)}
-            className={selectClass}
-            style={selectChevron}
-          >
-            <option value="">All carriers</option>
-            <option>DPD</option>
-            <option>DHL</option>
-            <option>InPost</option>
-            <option>GLS</option>
-          </select>
+          {/* Status multi-select */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="lg">
+                Status
+                {statusFilters.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 rounded-full px-1.5 text-[10px]">
+                    {statusFilters.length}
+                  </Badge>
+                )}
+                <HugeiconsIcon icon={ArrowDown02Icon} data-icon="inline-end" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              {ALL_STATUSES.map((s) => (
+                <DropdownMenuCheckboxItem
+                  key={s}
+                  checked={statusFilters.includes(s)}
+                  onCheckedChange={() => toggleStatus(s)}
+                >
+                  {STATUS_LABELS[s]}
+                </DropdownMenuCheckboxItem>
+              ))}
+              {statusFilters.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setStatusFilters([])}>
+                    Clear filter
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          <div className="ml-auto flex items-center gap-2">
-            <div className="relative">
-              <HugeiconsIcon
-                icon={Search01Icon}
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
-              />
-              <Input
+          {/* Carrier multi-select */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="lg">
+                Carrier
+                {carrierFilters.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 rounded-full px-1.5 text-[10px]">
+                    {carrierFilters.length}
+                  </Badge>
+                )}
+                <HugeiconsIcon icon={ArrowDown02Icon} data-icon="inline-end" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-36">
+              {ALL_CARRIERS.map((c) => (
+                <DropdownMenuCheckboxItem
+                  key={c}
+                  checked={carrierFilters.includes(c)}
+                  onCheckedChange={() => toggleCarrier(c)}
+                >
+                  {c}
+                </DropdownMenuCheckboxItem>
+              ))}
+              {carrierFilters.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setCarrierFilters([])}>
+                    Clear filter
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Search — InputGroup matches h-9 button height */}
+          <div className="ml-auto">
+            <InputGroup className="h-8 w-56">
+              <InputGroupAddon align="inline-start">
+                <HugeiconsIcon icon={Search01Icon} />
+              </InputGroupAddon>
+              <InputGroupInput
                 type="search"
                 placeholder="Search shipments..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-9 w-56 rounded-md border border-zinc-200 bg-white pl-8 pr-3 text-sm text-zinc-600 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-200"
               />
-            </div>
-            <ScheduleTransportDialog />
+            </InputGroup>
           </div>
+
+          <ScheduleTransportDialog />
         </div>
 
-        {/* Table — fills remaining height; fixed row height consistent across pages */}
-        <div ref={tableWrapperRef} className="flex-1 min-h-0 rounded-xl border border-zinc-200 bg-white overflow-hidden [&_[data-slot=table-container]]:overflow-x-visible">
+        {/* Table */}
+        <div className="rounded-xl border border-border bg-card overflow-hidden [&_[data-slot=table-container]]:overflow-x-visible">
           <Table>
             <TableHeader>
               <TableRow>
@@ -242,7 +282,7 @@ export default function ShipmentsPage() {
                   <TableHead
                     key={col.key}
                     onClick={() => handleSort(col.key)}
-                    className="cursor-pointer select-none hover:text-zinc-600 transition-colors"
+                    className="cursor-pointer select-none hover:text-foreground transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
                       {col.label}
@@ -256,28 +296,28 @@ export default function ShipmentsPage() {
             <TableBody>
               {paginated.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length + 2} className="py-12 text-center text-sm text-zinc-400">
+                  <TableCell colSpan={columns.length + 2} className="py-12 text-center text-sm text-muted-foreground">
                     No shipments found.
                   </TableCell>
                 </TableRow>
               ) : (
                 paginated.map((s) => (
-                  <TableRow key={s.id} style={{ height: rowHeight }} className="cursor-pointer">
+                  <TableRow key={s.id} className="cursor-pointer">
                     <TableCell className="p-0 w-3">
                       <div className={cn("h-full w-[3px] min-h-[44px] rounded-r-full", accentColor[s.status])} />
                     </TableCell>
-                    <TableCell className="font-mono text-xs font-medium text-zinc-700">{s.id}</TableCell>
-                    <TableCell className="font-medium text-zinc-900">{s.client}</TableCell>
-                    <TableCell className="text-zinc-500 max-w-[200px] truncate">{s.destination}</TableCell>
+                    <TableCell className="font-mono text-xs font-medium text-muted-foreground">{s.id}</TableCell>
+                    <TableCell className="font-medium text-foreground">{s.client}</TableCell>
+                    <TableCell className="text-muted-foreground max-w-[200px] truncate">{s.destination}</TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center rounded-md border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                      <Badge variant="outline" className="text-[11px]">
                         {s.carrier}
-                      </span>
+                      </Badge>
                     </TableCell>
-                    <TableCell className="text-zinc-500">{s.date}</TableCell>
+                    <TableCell className="text-muted-foreground">{s.date}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn("text-[11px]", statusStyle[s.status])}>
-                        {s.status}
+                        {STATUS_LABELS[s.status]}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right pr-3">
@@ -286,23 +326,12 @@ export default function ShipmentsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-zinc-400 hover:text-zinc-600"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <HugeiconsIcon icon={MoreVerticalIcon} size={16} />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-36 border border-zinc-200"
-                          style={{
-                            "--popover": "oklch(1 0 0)",
-                            "--popover-foreground": "oklch(0.145 0 0)",
-                            "--accent": "oklch(0.97 0 0)",
-                            "--accent-foreground": "oklch(0.205 0 0)",
-                            "--border": "oklch(0.922 0 0)",
-                          } as React.CSSProperties}
-                        >
+                        <DropdownMenuContent align="end" className="w-36">
                           <DropdownMenuItem>
                             <HugeiconsIcon icon={EyeIcon} size={14} />
                             View
@@ -329,12 +358,12 @@ export default function ShipmentsPage() {
           </Table>
         </div>
 
-        {/* Pagination bar — pinned at bottom */}
+        {/* Pagination */}
         <div className="flex shrink-0 items-center justify-between">
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             {filtered.length === 0
               ? "No results"
-              : <>Showing <span className="font-medium text-zinc-600">{(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)}</span> of <span className="font-medium text-zinc-600">{filtered.length}</span> shipments</>
+              : <>Showing <span className="font-medium text-foreground">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of <span className="font-medium text-foreground">{filtered.length}</span> shipments</>
             }
           </p>
           <Pagination className="w-auto mx-0">
@@ -343,14 +372,11 @@ export default function ShipmentsPage() {
                 <PaginationPrevious
                   href="#"
                   onClick={(e) => { e.preventDefault(); setPage((p) => Math.max(1, p - 1)) }}
-                  className={cn(
-                    "rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-50 transition-colors",
-                    page === 1 && "pointer-events-none opacity-40"
-                  )}
+                  className={cn(page === 1 && "pointer-events-none opacity-40")}
                 />
               </PaginationItem>
               <PaginationItem>
-                <span className="px-3 text-xs text-zinc-500">
+                <span className="px-3 text-xs text-muted-foreground">
                   Page {page} of {totalPages}
                 </span>
               </PaginationItem>
@@ -358,10 +384,7 @@ export default function ShipmentsPage() {
                 <PaginationNext
                   href="#"
                   onClick={(e) => { e.preventDefault(); setPage((p) => Math.min(totalPages, p + 1)) }}
-                  className={cn(
-                    "rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 hover:bg-zinc-50 transition-colors",
-                    page === totalPages && "pointer-events-none opacity-40"
-                  )}
+                  className={cn(page === totalPages && "pointer-events-none opacity-40")}
                 />
               </PaginationItem>
             </PaginationContent>
@@ -370,12 +393,12 @@ export default function ShipmentsPage() {
 
       </div>
 
-      {/* Delete Shipment confirmation */}
+      {/* Delete confirmation */}
       <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
       >
-        <AlertDialogContent size="sm" style={{ "--background": "oklch(1 0 0)", "--foreground": "oklch(0.145 0 0)", "--muted-foreground": "oklch(0.556 0 0)", "--border": "oklch(0.922 0 0)" } as React.CSSProperties}>
+        <AlertDialogContent size="sm">
           <AlertDialogHeader>
             <AlertDialogMedia className="bg-destructive/10 text-destructive">
               <HugeiconsIcon icon={Delete01Icon} size={16} />
@@ -392,6 +415,7 @@ export default function ShipmentsPage() {
               onClick={() => {
                 deleteShipment(deleteTarget!.id)
                 setDeleteTarget(null)
+                toast.success("Przesyłka została usunięta.")
               }}
             >
               Delete

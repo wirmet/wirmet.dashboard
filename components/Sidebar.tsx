@@ -264,18 +264,11 @@ export function AppSidebar() {
               side="right"
               align="end"
               sideOffset={8}
-              className="w-52 border border-zinc-200"
-              style={{
-                "--popover": "oklch(1 0 0)",
-                "--popover-foreground": "oklch(0.145 0 0)",
-                "--accent": "oklch(0.97 0 0)",
-                "--accent-foreground": "oklch(0.205 0 0)",
-                "--border": "oklch(0.922 0 0)",
-              } as React.CSSProperties}
+              className="w-52 border border-border"
             >
               <DropdownMenuLabel className="font-normal">
-                <p className="text-sm font-medium text-zinc-900">Jan Kowalski</p>
-                <p className="text-xs text-zinc-500">jan@wirmet.pl</p>
+                <p className="text-sm font-medium text-foreground">Jan Kowalski</p>
+                <p className="text-xs text-muted-foreground">jan@wirmet.pl</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>

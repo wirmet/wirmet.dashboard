@@ -1,7 +1,6 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
@@ -39,12 +38,13 @@ export function CurrentShipments() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm font-semibold text-foreground">Wysyłki</p>
-        <Button variant="outline" size="sm" asChild className="rounded-full">
-          <Link href="/shipments">
-            Wszystkie
-            <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
-          </Link>
-        </Button>
+        <Link
+          href="/shipments"
+          className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Wszystkie
+          <HugeiconsIcon icon={ArrowRight01Icon} size={12} />
+        </Link>
       </div>
 
       <div className="flex flex-col gap-2">

@@ -6,6 +6,13 @@ import { PageSetup } from "@/components/PageSetup"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   UserIcon,
@@ -19,6 +26,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
 import { useUser } from "@/components/UserContext"
+import { toast } from "sonner"
 import {
   Select,
   SelectContent,
@@ -26,32 +34,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-
-function SectionCard({
-  title,
-  children,
-  footer,
-}: {
-  title: string
-  children: React.ReactNode
-  footer?: React.ReactNode
-}) {
-  return (
-    <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
-      <div className="border-b border-zinc-100 px-5 py-3">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-          {title}
-        </span>
-      </div>
-      <div className="px-5 py-5 space-y-4">{children}</div>
-      {footer && (
-        <div className="border-t border-zinc-100 px-5 py-3 flex justify-end">
-          {footer}
-        </div>
-      )}
-    </div>
-  )
-}
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 function Field({
   label,
@@ -64,9 +58,9 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-zinc-600">{label}</label>
+      <label className="text-xs font-medium text-foreground">{label}</label>
       {children}
-      {hint && <p className="text-[11px] text-zinc-400">{hint}</p>}
+      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
     </div>
   )
 }
@@ -87,7 +81,7 @@ export default function ProfilePage() {
     confirm: "",
   })
 
-  const { avatarUrl, setAvatarUrl }        = useUser()
+  const { avatarUrl, setAvatarUrl }       = useUser()
   const [profileSaved,  setProfileSaved]  = useState(false)
   const [passwordSaved, setPasswordSaved] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -97,7 +91,6 @@ export default function ProfilePage() {
     if (!file) return
     if (avatarUrl) URL.revokeObjectURL(avatarUrl)
     setAvatarUrl(URL.createObjectURL(file))
-    // Reset input so the same file can be re-selected after removal
     e.target.value = ""
   }, [avatarUrl])
 
@@ -109,12 +102,14 @@ export default function ProfilePage() {
   function handleSaveProfile() {
     setProfileSaved(true)
     setTimeout(() => setProfileSaved(false), 2000)
+    toast.success("Zmiany w profilu zostały zapisane.")
   }
 
   function handleSavePassword() {
     setPasswordSaved(true)
     setPasswords({ current: "", next: "", confirm: "" })
     setTimeout(() => setPasswordSaved(false), 2000)
+    toast.success("Hasło zostało zmienione.")
   }
 
   const initials = `${profile.firstName[0] ?? ""}${profile.lastName[0] ?? ""}`.toUpperCase()
@@ -123,9 +118,9 @@ export default function ProfilePage() {
     <>
       <PageSetup title="Profile" icon={UserIcon} />
 
-      <div className="p-8 max-w-2xl space-y-6">
+      <div className="p-8 max-w-2xl flex flex-col gap-6">
 
-        {/* Hidden file input — accepts common image formats */}
+        {/* Hidden file input */}
         <input
           ref={fileInputRef}
           type="file"
@@ -134,241 +129,269 @@ export default function ProfilePage() {
           onChange={handleAvatarChange}
         />
 
-        {/* Personal information + avatar */}
-        <SectionCard
-          title="Profile"
-          footer={
+        {/* Personal information */}
+        <Card>
+          <CardHeader className="border-b border-border px-5 py-1">
+            <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Profile
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="flex flex-col gap-4 px-5 py-2">
+
+            {/* Avatar row */}
+            <div className="flex items-center gap-4 pb-4 border-b border-border">
+              <Avatar key={avatarUrl} className="size-14 shrink-0">
+                {avatarUrl && <AvatarImage src={avatarUrl} alt="Profile photo" />}
+                <AvatarFallback className="bg-muted text-muted-foreground font-semibold text-base">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {profile.firstName} {profile.lastName}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5 capitalize">
+                  {profile.role} · {profile.email}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="outline" size="lg" onClick={() => fileInputRef.current?.click()}>
+                  <HugeiconsIcon icon={Camera01Icon} data-icon="inline-start" />
+                  {avatarUrl ? "Change photo" : "Upload photo"}
+                </Button>
+                {avatarUrl && (
+                  <Button variant="destructive" size="lg" onClick={handleAvatarRemove}>
+                    <HugeiconsIcon icon={ImageRemove01Icon} data-icon="inline-start" />
+                    Remove
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Name */}
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="First name">
+                <div className="relative">
+                  <HugeiconsIcon
+                    icon={UserIcon}
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                  />
+                  <Input
+                    value={profile.firstName}
+                    onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))}
+                    className="h-9 pl-8 text-sm"
+                  />
+                </div>
+              </Field>
+
+              <Field label="Last name">
+                <Input
+                  value={profile.lastName}
+                  onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))}
+                  className="h-9 text-sm"
+                />
+              </Field>
+            </div>
+
+            {/* Email */}
+            <Field label="Email address" hint="Used for notifications and sign-in.">
+              <div className="relative">
+                <HugeiconsIcon
+                  icon={Mail01Icon}
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                />
+                <Input
+                  type="email"
+                  value={profile.email}
+                  onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))}
+                  className="h-9 pl-8 text-sm"
+                />
+              </div>
+            </Field>
+
+            {/* Phone + Role */}
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Phone" hint="Include country code, e.g. +48.">
+                <div className="relative">
+                  <HugeiconsIcon
+                    icon={SmartPhone01Icon}
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                  />
+                  <Input
+                    value={profile.phone}
+                    onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
+                    className="h-9 pl-8 text-sm"
+                  />
+                </div>
+              </Field>
+
+              <Field label="Role">
+                <Select
+                  value={profile.role}
+                  onValueChange={(v) => setProfile((p) => ({ ...p, role: v as "owner" | "admin" | "user" }))}
+                >
+                  <SelectTrigger size="lg" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="owner">Owner</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="user">User</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+
+            {/* Company */}
+            <Field label="Company name">
+              <div className="relative">
+                <HugeiconsIcon
+                  icon={Building01Icon}
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                />
+                <Input
+                  value={profile.company}
+                  onChange={(e) => setProfile((p) => ({ ...p, company: e.target.value }))}
+                  className="h-9 pl-8 text-sm"
+                />
+              </div>
+            </Field>
+
+          </CardContent>
+
+          <CardFooter className="border-t border-border px-5 py-1 justify-end">
             <Button
               variant={profileSaved ? "outline" : "default"}
               size="lg"
               onClick={handleSaveProfile}
-              className={cn(profileSaved && "text-green-600 border-green-200")}
+              className={cn(profileSaved && "text-emerald-600 border-emerald-500/30")}
             >
               {profileSaved ? "Saved!" : "Save changes"}
             </Button>
-          }
-        >
-          {/* Avatar row */}
-          <div className="flex items-center gap-4 pb-2 border-b border-zinc-100">
-            <div className="relative shrink-0">
-              <Avatar key={avatarUrl} className="size-14">
-                {avatarUrl && <AvatarImage src={avatarUrl} alt="Profile photo" />}
-                <AvatarFallback className="bg-zinc-200 text-zinc-700 font-semibold text-base">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                title="Change photo"
-                className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-white bg-zinc-800 text-white hover:bg-zinc-600 transition-colors"
-              >
-                <HugeiconsIcon icon={Camera01Icon} size={10} />
-              </button>
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-zinc-900 truncate">
-                {profile.firstName} {profile.lastName}
-              </p>
-              <p className="text-xs text-zinc-500 mt-0.5 capitalize">{profile.role} · {profile.email}</p>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <Button variant="outline" size="lg" onClick={() => fileInputRef.current?.click()}>
-                <HugeiconsIcon icon={Camera01Icon} size={13} />
-                {avatarUrl ? "Change photo" : "Upload photo"}
-              </Button>
-              {avatarUrl && (
-                <Button variant="destructive" size="lg" onClick={handleAvatarRemove}>
-                  <HugeiconsIcon icon={ImageRemove01Icon} size={13} />
-                  Remove photo
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="First name">
-              <div className="relative">
-                <HugeiconsIcon
-                  icon={UserIcon}
-                  size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
-                />
-                <Input
-                  value={profile.firstName}
-                  onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))}
-                  className="h-9 border-zinc-200 bg-white pl-8 text-sm text-zinc-900"
-                />
-              </div>
-            </Field>
-
-            <Field label="Last name">
-              <Input
-                value={profile.lastName}
-                onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))}
-                className="h-9 border-zinc-200 bg-white text-sm text-zinc-900"
-              />
-            </Field>
-          </div>
-
-          <Field label="Email address" hint="Used for notifications and sign-in.">
-            <div className="relative">
-              <HugeiconsIcon
-                icon={Mail01Icon}
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
-              />
-              <Input
-                type="email"
-                value={profile.email}
-                onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))}
-                className="h-9 border-zinc-200 bg-white pl-8 text-sm text-zinc-900"
-              />
-            </div>
-          </Field>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Phone" hint="Include country code, e.g. +48.">
-              <div className="relative">
-                <HugeiconsIcon
-                  icon={SmartPhone01Icon}
-                  size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
-                />
-                <Input
-                  value={profile.phone}
-                  onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))}
-                  className="h-9 border-zinc-200 bg-white pl-8 text-sm text-zinc-900"
-                />
-              </div>
-            </Field>
-
-            <Field label="Role">
-              <Select
-                value={profile.role}
-                onValueChange={(v) => setProfile((p) => ({ ...p, role: v as "owner" | "admin" | "user" }))}
-              >
-                <SelectTrigger size="lg" className="w-full border-zinc-200 bg-white text-zinc-900">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent
-                  position="popper"
-                  className="border border-zinc-200"
-                  style={{
-                    "--popover": "oklch(1 0 0)",
-                    "--popover-foreground": "oklch(0.145 0 0)",
-                    "--accent": "oklch(0.97 0 0)",
-                    "--accent-foreground": "oklch(0.205 0 0)",
-                    "--border": "oklch(0.922 0 0)",
-                  } as React.CSSProperties}
-                >
-                  <SelectItem value="owner">Owner</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-
-          <Field label="Company name">
-            <div className="relative">
-              <HugeiconsIcon
-                icon={Building01Icon}
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
-              />
-              <Input
-                value={profile.company}
-                onChange={(e) => setProfile((p) => ({ ...p, company: e.target.value }))}
-                className="h-9 border-zinc-200 bg-white pl-8 text-sm text-zinc-900"
-              />
-            </div>
-          </Field>
-        </SectionCard>
+          </CardFooter>
+        </Card>
 
         {/* Security */}
-        <SectionCard
-          title="Security"
-          footer={
+        <Card>
+          <CardHeader className="border-b border-border px-5 py-1">
+            <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Security
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="flex flex-col gap-4 px-5 py-2">
+
+            <Field label="Current password">
+              <div className="relative">
+                <HugeiconsIcon
+                  icon={LockPasswordIcon}
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                />
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={passwords.current}
+                  onChange={(e) => setPasswords((p) => ({ ...p, current: e.target.value }))}
+                  className="h-9 pl-8 text-sm"
+                />
+              </div>
+            </Field>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="New password" hint="Minimum 8 characters.">
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={passwords.next}
+                  onChange={(e) => setPasswords((p) => ({ ...p, next: e.target.value }))}
+                  className="h-9 text-sm"
+                />
+              </Field>
+
+              <Field
+                label="Confirm password"
+                hint={
+                  passwords.confirm && passwords.next !== passwords.confirm
+                    ? <span className="text-destructive">Passwords do not match.</span>
+                    : undefined
+                }
+              >
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={passwords.confirm}
+                  onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
+                  aria-invalid={!!(passwords.confirm && passwords.next !== passwords.confirm)}
+                  className="h-9 text-sm"
+                />
+              </Field>
+            </div>
+
+          </CardContent>
+
+          <CardFooter className="border-t border-border px-5 py-1 justify-end">
             <Button
               variant={passwordSaved ? "outline" : "default"}
               size="lg"
               onClick={handleSavePassword}
-              className={cn(passwordSaved && "text-green-600 border-green-200")}
+              className={cn(passwordSaved && "text-emerald-600 border-emerald-500/30")}
               disabled={!passwords.current || !passwords.next || passwords.next !== passwords.confirm}
             >
               {passwordSaved ? "Password updated!" : "Update password"}
             </Button>
-          }
-        >
-          <Field label="Current password">
-            <div className="relative">
-              <HugeiconsIcon
-                icon={LockPasswordIcon}
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
-              />
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={passwords.current}
-                onChange={(e) => setPasswords((p) => ({ ...p, current: e.target.value }))}
-                className="h-9 border-zinc-200 bg-white pl-8 text-sm text-zinc-900"
-              />
-            </div>
-          </Field>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="New password" hint="Minimum 8 characters.">
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={passwords.next}
-                onChange={(e) => setPasswords((p) => ({ ...p, next: e.target.value }))}
-                className="h-9 border-zinc-200 bg-white text-sm text-zinc-900"
-              />
-            </Field>
-
-            <Field
-              label="Confirm password"
-              hint={
-                passwords.confirm && passwords.next !== passwords.confirm
-                  ? <span className="text-red-500">Passwords do not match.</span>
-                  : undefined
-              }
-            >
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={passwords.confirm}
-                onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
-                className={cn(
-                  "h-9 bg-white text-sm text-zinc-900",
-                  passwords.confirm && passwords.next !== passwords.confirm
-                    ? "border-red-400"
-                    : "border-zinc-200"
-                )}
-              />
-            </Field>
-          </div>
-        </SectionCard>
+          </CardFooter>
+        </Card>
 
         {/* Danger zone */}
-        <SectionCard title="Danger Zone">
-          <div className="flex items-center justify-between gap-6">
-            <div>
-              <p className="text-sm font-medium text-zinc-900">Delete account</p>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Permanently delete your account and all associated data. This action cannot be undone.
-              </p>
+        <Card>
+          <CardHeader className="border-b border-border px-5 py-1">
+            <CardTitle className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Danger Zone
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="px-5 py-2">
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex flex-col gap-0.5">
+                <p className="text-sm font-medium text-foreground">Delete account</p>
+                <p className="text-xs text-muted-foreground">
+                  Permanently delete your account and all associated data. This action cannot be undone.
+                </p>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="lg" className="shrink-0">
+                    <HugeiconsIcon icon={Delete01Icon} data-icon="inline-start" />
+                    Delete account
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent size="sm">
+                  <AlertDialogHeader>
+                    <AlertDialogMedia className="bg-destructive/10 text-destructive">
+                      <HugeiconsIcon icon={Delete01Icon} />
+                    </AlertDialogMedia>
+                    <AlertDialogTitle>Usunąć konto?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Ta operacja jest nieodwracalna. Twoje konto oraz wszystkie powiązane dane zostaną trwale usunięte.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel variant="ghost">Anuluj</AlertDialogCancel>
+                    <AlertDialogAction variant="destructive">Usuń konto</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
-            <Button variant="destructive" size="lg" className="shrink-0">
-              <HugeiconsIcon icon={Delete01Icon} size={13} />
-              Delete account
-            </Button>
-          </div>
-        </SectionCard>
+          </CardContent>
+        </Card>
 
       </div>
     </>
