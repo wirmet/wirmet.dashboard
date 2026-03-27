@@ -1,5 +1,9 @@
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import Link from "next/link"
 
 type OfferStatus = "Do wyceny" | "Do wysłania" | "Oczekuje na odpowiedź"
 
@@ -37,47 +41,47 @@ const offers: PendingOffer[] = [
   },
 ]
 
-const accentColor: Record<OfferStatus, string> = {
+// Small status dot color
+const dotColor: Record<OfferStatus, string> = {
   "Do wyceny":             "bg-amber-400",
   "Do wysłania":           "bg-blue-400",
-  "Oczekuje na odpowiedź": "bg-zinc-300",
+  "Oczekuje na odpowiedź": "bg-muted-foreground/40",
 }
 
-const badgeStyle: Record<OfferStatus, string> = {
-  "Do wyceny":             "bg-amber-50 text-amber-700 border-amber-200",
-  "Do wysłania":           "bg-blue-50 text-blue-700 border-blue-200",
-  "Oczekuje na odpowiedź": "bg-zinc-100 text-zinc-600 border-zinc-200",
+// Opacity-based badge colors — work in both light and dark
+const badgeClass: Record<OfferStatus, string> = {
+  "Do wyceny":             "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  "Do wysłania":           "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  "Oczekuje na odpowiedź": "bg-zinc-500/10 text-muted-foreground border-zinc-500/20",
 }
 
 export function PendingOffers() {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
-      {offers.map((offer, index) => (
-        <div
-          key={offer.number}
-          className={cn(
-            "flex items-center gap-4 px-4 py-3",
-            index !== offers.length - 1 && "border-b border-zinc-100"
-          )}
-        >
-          {/* Status accent bar */}
-          <div className={cn("h-8 w-1 shrink-0 rounded-full", accentColor[offer.status])} />
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-semibold text-foreground">Oferty w toku</p>
+        <Button variant="outline" size="sm" asChild className="rounded-full">
+          <Link href="/offers">
+            Wszystkie
+            <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
+          </Link>
+        </Button>
+      </div>
 
-          {/* Main content */}
-          <div className="flex flex-1 items-center justify-between gap-4 min-w-0">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-zinc-900 truncate">{offer.company}</p>
-              <p className="text-xs text-zinc-400">{offer.number} · {offer.created}</p>
+      <div className="flex flex-col gap-2">
+        {offers.map((offer) => (
+          <div key={offer.number} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+            <div className={cn("size-2 shrink-0 rounded-full", dotColor[offer.status])} />
+            <div className="flex-1 min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">{offer.company}</p>
+              <p className="text-xs text-muted-foreground">{offer.number} · {offer.created}</p>
             </div>
-            <Badge
-              variant="outline"
-              className={cn("shrink-0 text-[11px]", badgeStyle[offer.status])}
-            >
+            <Badge variant="outline" className={cn("shrink-0 text-[11px]", badgeClass[offer.status])}>
               {offer.status}
             </Badge>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }

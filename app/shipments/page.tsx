@@ -273,7 +273,7 @@ export default function ShipmentsPage() {
                 className="h-9 w-56 rounded-md border border-zinc-200 bg-white pl-8 pr-3 text-sm text-zinc-600 hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-200"
               />
             </div>
-            <Button variant="brand" size="lg" onClick={() => setAddOpen(true)}>
+            <Button variant="default" size="lg" onClick={() => setAddOpen(true)}>
               <HugeiconsIcon icon={Add01Icon} size={14} />
               Add Shipment
             </Button>
@@ -577,7 +577,7 @@ export default function ShipmentsPage() {
             <DialogClose asChild>
               <Button variant="outline" size="lg">Cancel</Button>
             </DialogClose>
-            <Button variant="brand" size="lg" onClick={handleSubmit}>
+            <Button variant="default" size="lg" onClick={handleSubmit}>
               Add Shipment
             </Button>
           </DialogFooter>

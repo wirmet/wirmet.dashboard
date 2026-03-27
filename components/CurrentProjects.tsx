@@ -1,14 +1,6 @@
 "use client"
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -17,8 +9,29 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Cancel01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons"
+import type { IconSvgElement } from "@hugeicons/react"
+import {
+  Cancel01Icon,
+  PencilEdit01Icon,
+  ArrowRight01Icon,
+  CheckmarkCircle01Icon,
+  Add01Icon,
+  Invoice01Icon,
+  Wrench01Icon,
+  Calendar01Icon,
+  CreditCardIcon,
+  DeliveryTruck01Icon,
+  Flag01Icon,
+  Building01Icon,
+  HashtagIcon,
+  Location01Icon,
+  MoreHorizontalIcon,
+  Share01Icon,
+  Download01Icon,
+} from "@hugeicons/core-free-icons"
+import { cn } from "@/lib/utils"
 import { useState } from "react"
+import Link from "next/link"
 
 type Status = "Ordered" | "Paid"
 
@@ -112,127 +125,143 @@ const projects: Project[] = [
 function StatusBadge({ status }: { status: Status }) {
   return (
     <Badge
-      className={
-        status === "Paid"
-          ? "bg-green-50 text-green-700 border-green-200"
-          : "bg-blue-50 text-blue-700 border-blue-200"
-      }
       variant="outline"
+      className={cn(
+        status === "Paid"
+          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+          : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+      )}
     >
       {status}
     </Badge>
   )
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+// Icon + label on the left, value right-aligned — inspired by "Transaction details" rows
+function IconRow({
+  icon,
+  label,
+  children,
+}: {
+  icon: IconSvgElement
+  label: string
+  children: React.ReactNode
+}) {
   return (
-    <div className="flex justify-between gap-4 text-xs">
-      <span className="shrink-0 text-zinc-400">{label}</span>
-      <span className="text-right font-medium text-zinc-700">{value}</span>
+    <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex w-40 shrink-0 items-center gap-2.5">
+        <HugeiconsIcon icon={icon} size={14} className="shrink-0 text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">{label}</span>
+      </div>
+      <div className="flex flex-1 justify-end text-sm font-medium text-foreground">
+        {children}
+      </div>
     </div>
   )
 }
 
 function ProjectDialog({ project }: { project: Project }) {
-  const total = project.items.reduce(
-    (sum, item) => sum + item.quantity * item.unitPrice,
-    0
-  )
+  const total = project.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+  const totalFixed = total.toFixed(2)
+  const [whole, cents] = totalFixed.split(".")
+  const wholeFormatted = Number(whole).toLocaleString("pl-PL")
 
   return (
     <DialogContent
       showCloseButton={false}
-      className="flex max-h-[90vh] flex-col overflow-hidden bg-white p-0 ring-0 border border-zinc-200 sm:max-w-2xl"
+      className="flex max-h-[90vh] flex-col overflow-hidden bg-background p-0 border border-border sm:max-w-md"
     >
-      <DialogTitle className="sr-only">{project.client} — project details</DialogTitle>
+      <DialogTitle className="sr-only">{project.client} — szczegóły realizacji</DialogTitle>
 
       {/* Header */}
-      <div className="relative border-b border-zinc-100 px-6 pt-6 pb-4">
+      <div className="flex items-center justify-between px-5 py-4">
+        <p className="text-sm font-semibold text-foreground">Szczegóły realizacji</p>
         <DialogClose asChild>
-          <Button variant="ghost" size="icon-sm" className="absolute top-3 right-3">
-            <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} className="text-zinc-900" />
+          <Button variant="ghost" size="icon-sm">
+            <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
           </Button>
         </DialogClose>
-
-        <p className="text-lg font-bold text-zinc-900">{project.client}</p>
-
-        <div className="mt-2 flex items-center justify-between">
-          <StatusBadge status={project.status} />
-          <Button variant="outline" size="lg">
-            <HugeiconsIcon icon={PencilEdit01Icon} size={13} />
-            Edit
-          </Button>
-        </div>
       </div>
 
-      {/* Scrollable content */}
-      <div className="overflow-y-auto px-6 pb-6 pt-1 space-y-4">
+      {/* Scrollable body */}
+      <div className="flex flex-col gap-3 overflow-y-auto px-4 pb-4">
 
-        {/* 1. Project Info */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Project Info</p>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-2">
-            <DetailRow label="Offer number" value={project.offerNumber} />
-            <DetailRow label="Type of work" value={project.type} />
-            <DetailRow label="Order date" value={project.orderDate} />
-            <DetailRow label="Payment due" value={project.paymentDue} />
-            <DetailRow label="Delivery date" value={project.deliveryDate} />
-            <DetailRow label="Completion" value={project.completionDate} />
-          </div>
+        {/* Hero — total order value */}
+        <div className="rounded-xl bg-card px-5 py-4">
+          <p className="mb-1.5 text-xs text-muted-foreground">Wartość zamówienia</p>
+          <p className="text-4xl font-bold tracking-tight text-foreground">
+            {wholeFormatted}
+            <span className="text-2xl font-semibold text-muted-foreground">,{cents} zł</span>
+          </p>
         </div>
 
-        <Separator className="bg-zinc-100" />
-
-        {/* 2. Company Details */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Company Details</p>
-          <div className="space-y-2">
-            <DetailRow label="Company" value={project.companyName} />
-            <DetailRow label="NIP" value={project.nip} />
-            <DetailRow label="Address" value={project.companyAddress} />
-          </div>
+        {/* Project details — icon rows */}
+        <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
+          <IconRow icon={Invoice01Icon} label="Numer oferty">{project.offerNumber}</IconRow>
+          <IconRow icon={Wrench01Icon} label="Rodzaj prac">{project.type}</IconRow>
+          <IconRow icon={CheckmarkCircle01Icon} label="Status">
+            <StatusBadge status={project.status} />
+          </IconRow>
+          <IconRow icon={Calendar01Icon} label="Data zamówienia">{project.orderDate}</IconRow>
+          <IconRow icon={CreditCardIcon} label="Termin płatności">{project.paymentDue}</IconRow>
+          <IconRow icon={DeliveryTruck01Icon} label="Data dostawy">{project.deliveryDate}</IconRow>
+          <IconRow icon={Flag01Icon} label="Data realizacji">{project.completionDate}</IconRow>
         </div>
 
-        <Separator className="bg-zinc-100" />
-
-        {/* 3. Installation Address */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Installation Address</p>
-          <DetailRow label="Address" value={project.address} />
+        {/* Company + addresses */}
+        <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
+          <IconRow icon={Building01Icon} label="Firma">{project.companyName}</IconRow>
+          <IconRow icon={HashtagIcon} label="NIP">{project.nip}</IconRow>
+          <IconRow icon={Location01Icon} label="Adres firmy">{project.companyAddress}</IconRow>
+          <IconRow icon={Location01Icon} label="Adres montażu">{project.address}</IconRow>
         </div>
 
-        <Separator className="bg-zinc-100" />
-
-        {/* 4. Items & Services */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Items & Services</p>
-
-          <div className="grid grid-cols-[1fr_5rem_6rem_6rem] text-[11px] font-medium uppercase tracking-wide text-zinc-400">
-            <span>Name</span>
-            <span className="text-right">Qty</span>
-            <span className="text-right">Unit price</span>
-            <span className="text-right">Total</span>
-          </div>
-
-          <div className="space-y-2">
+        {/* Items & services */}
+        <div className="flex flex-col gap-2">
+          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Pozycje i usługi
+          </p>
+          <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
             {project.items.map((item, i) => (
-              <div key={i} className="grid grid-cols-[1fr_5rem_6rem_6rem] text-xs">
-                <span className="font-medium text-zinc-700">{item.name}</span>
-                <span className="text-right text-zinc-500">{item.quantity} {item.unit}</span>
-                <span className="text-right text-zinc-500">{item.unitPrice.toFixed(2)} zł</span>
-                <span className="text-right font-medium text-zinc-900">
+              <div key={i} className="flex items-center justify-between px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">{item.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.quantity} {item.unit} × {item.unitPrice.toFixed(2)} zł
+                  </p>
+                </div>
+                <p className="shrink-0 pl-4 text-sm font-semibold text-foreground">
                   {(item.quantity * item.unitPrice).toFixed(2)} zł
-                </span>
+                </p>
               </div>
             ))}
-          </div>
-
-          <div className="flex items-center justify-between border-t border-zinc-100 pt-3 text-sm font-semibold text-zinc-900">
-            <span>Total</span>
-            <span>{total.toFixed(2)} zł</span>
+            {/* Total row */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <p className="text-sm font-semibold text-foreground">Razem</p>
+              <p className="text-sm font-bold text-foreground">{totalFixed} zł</p>
+            </div>
           </div>
         </div>
 
+      </div>
+
+      {/* Footer — actions */}
+      <div className="flex items-center justify-between border-t border-border px-5 py-4">
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon-sm">
+            <HugeiconsIcon icon={MoreHorizontalIcon} size={15} />
+          </Button>
+          <Button variant="ghost" size="icon-sm">
+            <HugeiconsIcon icon={Share01Icon} size={15} />
+          </Button>
+          <Button variant="ghost" size="icon-sm">
+            <HugeiconsIcon icon={Download01Icon} size={15} />
+          </Button>
+        </div>
+        <Button variant="outline" size="lg">
+          <HugeiconsIcon icon={PencilEdit01Icon} data-icon="inline-start" />
+          Edytuj
+        </Button>
       </div>
     </DialogContent>
   )
@@ -243,39 +272,53 @@ export function CurrentProjects() {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {projects.map((project) => (
-          <Card
-            key={project.client}
-            onClick={() => setSelected(project)}
-            className="cursor-pointer rounded-xl border border-zinc-200 bg-white shadow-none ring-0 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+      <div className="flex-1 flex flex-col">
+        {/* Section header */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-base font-semibold text-foreground">Aktualne realizacje</p>
+          <Link
+            href="/projects"
+            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
-            <CardHeader className="border-b border-zinc-100 pb-3 gap-0">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <CardTitle className="text-sm font-semibold text-zinc-900">
-                    {project.client}
-                  </CardTitle>
-                  <CardDescription className="mt-0.5">
-                    {project.deadline}
-                  </CardDescription>
-                </div>
+            Wszystkie
+            <HugeiconsIcon icon={ArrowRight01Icon} size={12} />
+          </Link>
+        </div>
+
+        {/* Vertical list of project cards */}
+        <div className="flex flex-col gap-3 flex-1">
+          {projects.map((project) => (
+            <div
+              key={project.client}
+              onClick={() => setSelected(project)}
+              className="rounded-xl border border-border bg-card p-4 cursor-pointer transition-colors hover:bg-muted/30 flex flex-col gap-3"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">{project.deadline}</span>
                 <StatusBadge status={project.status} />
               </div>
-            </CardHeader>
+              <p className="text-sm font-semibold text-foreground">{project.client}</p>
+              <div className="flex items-center gap-2 min-w-0">
+                <Badge variant="outline" className="text-[11px] shrink-0">{project.type}</Badge>
+                <span className="text-xs text-muted-foreground shrink-0">{project.offerNumber}</span>
+                <span className="text-xs text-muted-foreground shrink-0">·</span>
+                <span className="truncate text-xs text-muted-foreground">{project.address}</span>
+              </div>
+            </div>
+          ))}
 
-            <CardContent className="space-y-1.5 pt-3">
-              <div className="flex gap-2 text-xs">
-                <span className="w-24 shrink-0 text-zinc-400">Type</span>
-                <span className="font-medium text-zinc-700">{project.type}</span>
-              </div>
-              <div className="flex gap-2 text-xs">
-                <span className="w-24 shrink-0 text-zinc-400">Address</span>
-                <span className="font-medium text-zinc-700">{project.address}</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+          {/* End-of-list indicator — fills remaining height */}
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border min-h-[80px]">
+            <div className="flex flex-col items-center gap-2">
+              <HugeiconsIcon icon={CheckmarkCircle01Icon} size={22} className="text-muted-foreground" />
+              <p className="text-xs text-muted-foreground/50">Brak więcej aktualnych realizacji</p>
+            </div>
+            <Button variant="outline" size="lg">
+              <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" className="text-white" />
+              Nowa realizacja
+            </Button>
+          </div>
+        </div>
       </div>
 
       <Dialog

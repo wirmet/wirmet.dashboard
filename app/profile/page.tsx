@@ -139,7 +139,7 @@ export default function ProfilePage() {
           title="Profile"
           footer={
             <Button
-              variant={profileSaved ? "outline" : "brand"}
+              variant={profileSaved ? "outline" : "default"}
               size="lg"
               onClick={handleSaveProfile}
               className={cn(profileSaved && "text-green-600 border-green-200")}
@@ -174,12 +174,12 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <Button variant="outline" size="md" onClick={() => fileInputRef.current?.click()}>
+              <Button variant="outline" size="lg" onClick={() => fileInputRef.current?.click()}>
                 <HugeiconsIcon icon={Camera01Icon} size={13} />
                 {avatarUrl ? "Change photo" : "Upload photo"}
               </Button>
               {avatarUrl && (
-                <Button variant="destructive" size="md" onClick={handleAvatarRemove}>
+                <Button variant="destructive" size="lg" onClick={handleAvatarRemove}>
                   <HugeiconsIcon icon={ImageRemove01Icon} size={13} />
                   Remove photo
                 </Button>
@@ -292,7 +292,7 @@ export default function ProfilePage() {
           title="Security"
           footer={
             <Button
-              variant={passwordSaved ? "outline" : "brand"}
+              variant={passwordSaved ? "outline" : "default"}
               size="lg"
               onClick={handleSavePassword}
               className={cn(passwordSaved && "text-green-600 border-green-200")}
@@ -363,7 +363,7 @@ export default function ProfilePage() {
                 Permanently delete your account and all associated data. This action cannot be undone.
               </p>
             </div>
-            <Button variant="destructive" size="md" className="shrink-0">
+            <Button variant="destructive" size="lg" className="shrink-0">
               <HugeiconsIcon icon={Delete01Icon} size={13} />
               Delete account
             </Button>

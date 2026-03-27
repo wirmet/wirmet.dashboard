@@ -13,9 +13,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <TooltipProvider>
     <SidebarProvider>
       <AppSidebar />
-      <div className="flex flex-1 flex-col min-w-0">
+      {/* Floating content card — elevated above the dark background, sidebar sits on the bg */}
+      {/* border zamiast ring — ring (box-shadow) jest poza elementem i przykrywany przez fixed sidebar po lewej */}
+      <div className="flex flex-1 flex-col min-w-0 my-3 mr-3 rounded-xl overflow-hidden bg-surface border border-border">
         <TopBar />
-        <main className="flex-1 bg-zinc-50">{children}</main>
+        <main className="flex-1">{children}</main>
       </div>
     </SidebarProvider>
     </TooltipProvider>

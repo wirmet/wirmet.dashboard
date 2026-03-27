@@ -318,7 +318,7 @@ export default function CustomersPage() {
           {/* Back link */}
           <Button
             variant="ghost"
-            size="md"
+            size="lg"
             onClick={() => setViewCustomer(null)}
             className="px-0 text-zinc-400 hover:bg-transparent hover:text-zinc-700"
           >
@@ -346,7 +346,7 @@ export default function CustomersPage() {
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Button
                     variant="outline"
-                    size="md"
+                    size="lg"
                     onClick={() => { setViewCustomer(null); handleEditOpen(viewCustomer) }}
                   >
                     <HugeiconsIcon icon={PencilEdit01Icon} size={12} />
@@ -354,7 +354,7 @@ export default function CustomersPage() {
                   </Button>
                   <Button
                     variant="destructive"
-                    size="md"
+                    size="lg"
                     onClick={() => setDeleteTarget(viewCustomer)}
                   >
                     <HugeiconsIcon icon={Delete01Icon} size={12} />
@@ -581,7 +581,7 @@ export default function CustomersPage() {
               <DialogClose asChild>
                 <Button variant="outline" size="lg">Cancel</Button>
               </DialogClose>
-              <Button variant="brand" size="lg" onClick={handleEditSubmit}>Save Changes</Button>
+              <Button variant="default" size="lg" onClick={handleEditSubmit}>Save Changes</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -612,7 +612,7 @@ export default function CustomersPage() {
               />
             </div>
 
-            <Button variant="brand" size="lg" onClick={() => setAddOpen(true)}>
+            <Button variant="default" size="lg" onClick={() => setAddOpen(true)}>
               <HugeiconsIcon icon={Add01Icon} size={14} />
               Add Customer
             </Button>
@@ -792,7 +792,7 @@ export default function CustomersPage() {
             <DialogClose asChild>
               <Button variant="outline" size="lg">Cancel</Button>
             </DialogClose>
-            <Button variant="brand" size="lg" onClick={handleSubmit}>
+            <Button variant="default" size="lg" onClick={handleSubmit}>
               Add Customer
             </Button>
           </DialogFooter>
@@ -867,7 +867,7 @@ export default function CustomersPage() {
             <DialogClose asChild>
               <Button variant="outline" size="lg">Cancel</Button>
             </DialogClose>
-            <Button variant="brand" size="lg" onClick={handleEditSubmit}>Save Changes</Button>
+            <Button variant="default" size="lg" onClick={handleEditSubmit}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

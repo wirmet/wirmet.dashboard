@@ -20,9 +20,10 @@ import {
   ArrowDown01Icon,
   Logout01Icon,
   UserEdit01Icon,
+  ArrowRight01Icon,
+  FolderOpenIcon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUser } from "@/components/UserContext"
 import {
@@ -34,6 +35,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -44,9 +50,19 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+
+// Top-level folders inside the Files module — shown as collapsible sub-items
+const fileFolders = [
+  { label: "Offers 2025", href: "/files?folder=offers-2025" },
+  { label: "Projects Archive", href: "/files?folder=projects" },
+  { label: "Supplier Docs", href: "/files?folder=suppliers" },
+  { label: "Invoices", href: "/files?folder=invoices" },
+]
 
 const mainNavItems = [
   { label: "Dashboard", icon: Home01Icon, href: "/" },
@@ -54,7 +70,6 @@ const mainNavItems = [
   { label: "Orders", icon: ShoppingCart01Icon, href: "/orders" },
   { label: "Shipments", icon: DeliveryTruck01Icon, href: "/shipments" },
   { label: "Schedule", icon: Calendar01Icon, href: "/schedule" },
-  { label: "Files", icon: Folder01Icon, href: "/files" },
 ]
 
 const managementNavItems = [
@@ -64,15 +79,11 @@ const managementNavItems = [
   { label: "Warehouse", icon: WarehouseIcon, href: "/warehouse" },
 ]
 
-const bottomNavItems = [
-  { label: "Settings", icon: Settings01Icon, href: "/settings" },
-  { label: "Help", icon: HelpCircleIcon, href: "/help" },
-]
-
-// Shared className for all nav menu buttons
+// Shared nav button style — uses sidebar CSS vars for theme compatibility
 const navButtonClass =
-  "h-9 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 data-[active=true]:bg-zinc-100 data-[active=true]:font-medium data-[active=true]:text-zinc-900"
+  "h-9 text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-foreground"
 
+// Simple nav group for non-collapsible items
 function NavGroup({
   label,
   items,
@@ -84,7 +95,7 @@ function NavGroup({
 }) {
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className="text-xs font-medium tracking-wider text-zinc-400 uppercase">
+      <SidebarGroupLabel className="text-[11px] font-medium tracking-wider text-sidebar-foreground/30 uppercase">
         {label}
       </SidebarGroupLabel>
       <SidebarGroupContent>
@@ -110,6 +121,54 @@ function NavGroup({
   )
 }
 
+// Files section with collapsible top-level folders
+function FilesNavItem({ pathname }: { pathname: string }) {
+  const isFilesActive = pathname === "/files" || pathname.startsWith("/files")
+  const [open, setOpen] = React.useState(isFilesActive)
+
+  return (
+    <SidebarMenuItem>
+      <Collapsible open={open} onOpenChange={setOpen} className="group/files">
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton
+            isActive={isFilesActive && !open}
+            tooltip="Files"
+            className={cn(navButtonClass, "w-full")}
+          >
+            <HugeiconsIcon icon={open ? FolderOpenIcon : Folder01Icon} size={16} />
+            <span>Files</span>
+            {/* Arrow rotates 90° when open */}
+            <HugeiconsIcon
+              icon={ArrowRight01Icon}
+              size={14}
+              className="ml-auto text-sidebar-foreground/30 transition-transform duration-200 group-data-[state=open]/files:rotate-90"
+            />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {fileFolders.map((folder) => (
+              <SidebarMenuSubItem key={folder.href}>
+                <SidebarMenuSubButton
+                  asChild
+                  isActive={pathname === folder.href}
+                  className="text-sidebar-foreground/50 hover:text-sidebar-foreground data-[active=true]:text-sidebar-foreground"
+                >
+                  <Link href={folder.href}>
+                    <HugeiconsIcon icon={Folder01Icon} size={14} />
+                    <span>{folder.label}</span>
+                  </Link>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </Collapsible>
+    </SidebarMenuItem>
+  )
+}
+
 export function AppSidebar() {
   const pathname = usePathname()
   const { state } = useSidebar()
@@ -119,37 +178,27 @@ export function AppSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r border-zinc-200 bg-white"
-      style={{
-        "--sidebar": "oklch(1 0 0)",
-        "--sidebar-foreground": "oklch(0.145 0 0)",
-        "--sidebar-accent": "oklch(0.97 0 0)",
-        "--sidebar-accent-foreground": "oklch(0.205 0 0)",
-        "--sidebar-border": "oklch(0.922 0 0)",
-      } as React.CSSProperties}
+      // sits on the background — content card is the elevated element
     >
       {/* Logo */}
-      <SidebarHeader className="h-[72px] border-b border-zinc-200 py-0 justify-center">
+      <SidebarHeader className="py-4 justify-center">
         <div
           className={cn(
             "flex items-center gap-2 px-1 overflow-hidden",
             isCollapsed && "justify-center"
           )}
         >
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-lg font-bold text-white">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-lg font-bold text-white dark:bg-white dark:text-zinc-900">
             W
           </div>
           {!isCollapsed && (
             <>
-              <span className="flex-1 truncate font-semibold text-zinc-900">
+              <span className="flex-1 truncate font-semibold text-sidebar-foreground">
                 Wirmet
               </span>
-              <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700 whitespace-nowrap">
+              <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-400 whitespace-nowrap">
                 PRO
               </span>
-              <Button variant="ghost" size="icon-sm" className="shrink-0">
-                <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
-              </Button>
             </>
           )}
         </div>
@@ -157,38 +206,24 @@ export function AppSidebar() {
 
       {/* Main navigation */}
       <SidebarContent className="py-4">
+        {/* Main group — plain items */}
         <NavGroup label="Main" items={mainNavItems} pathname={pathname} />
-        <NavGroup
-          label="Management"
-          items={managementNavItems}
-          pathname={pathname}
-        />
-      </SidebarContent>
 
-      {/* Bottom: settings, help, user profile */}
-      <SidebarFooter className="border-t border-zinc-200 py-2 gap-0">
-        <SidebarGroup className="py-0">
+        {/* Files — separate group with collapsible sub-folders */}
+        <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {bottomNavItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.href}
-                    tooltip={item.label}
-                    className={navButtonClass}
-                  >
-                    <Link href={item.href}>
-                      <HugeiconsIcon icon={item.icon} size={16} />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <FilesNavItem pathname={pathname} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Management group */}
+        <NavGroup label="Management" items={managementNavItems} pathname={pathname} />
+      </SidebarContent>
+
+      {/* Bottom: user profile only — Settings & Help moved into the dropdown */}
+      <SidebarFooter className="py-2 gap-0">
         {/* User profile */}
         <div className="px-2 pt-1">
           <DropdownMenu>
@@ -196,30 +231,30 @@ export function AppSidebar() {
               <button
                 title={isCollapsed ? "Jan Kowalski" : undefined}
                 className={cn(
-                  "flex w-full items-center rounded-lg p-1.5 transition-colors hover:bg-zinc-50",
+                  "flex w-full items-center rounded-lg p-1.5 transition-colors hover:bg-sidebar-accent",
                   isCollapsed ? "justify-center" : "gap-3"
                 )}
               >
                 <Avatar key={avatarUrl} className="size-8 shrink-0">
                   {avatarUrl && <AvatarImage src={avatarUrl} alt="Profile photo" />}
-                  <AvatarFallback className="bg-zinc-200 text-sm font-medium text-zinc-700">
+                  <AvatarFallback className="bg-sidebar-accent text-sm font-medium text-sidebar-foreground">
                     JK
                   </AvatarFallback>
                 </Avatar>
                 {!isCollapsed && (
                   <>
                     <div className="flex-1 overflow-hidden text-left">
-                      <p className="truncate text-sm font-medium text-zinc-900">
+                      <p className="truncate text-sm font-medium text-sidebar-foreground">
                         Jan Kowalski
                       </p>
-                      <p className="truncate text-xs text-zinc-500">
+                      <p className="truncate text-xs text-sidebar-foreground/50">
                         jan@wirmet.pl
                       </p>
                     </div>
                     <HugeiconsIcon
                       icon={ArrowDown01Icon}
                       size={16}
-                      className="shrink-0 text-zinc-400"
+                      className="shrink-0 text-sidebar-foreground/30"
                     />
                   </>
                 )}
@@ -249,9 +284,17 @@ export function AppSidebar() {
                   Edit profile
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <HugeiconsIcon icon={Settings01Icon} size={14} />
-                Settings
+              <DropdownMenuItem asChild>
+                <Link href="/settings">
+                  <HugeiconsIcon icon={Settings01Icon} size={14} />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/help">
+                  <HugeiconsIcon icon={HelpCircleIcon} size={14} />
+                  Help
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive">
@@ -263,8 +306,6 @@ export function AppSidebar() {
         </div>
       </SidebarFooter>
 
-      {/* Drag handle to resize / click to toggle */}
-      <SidebarRail />
     </Sidebar>
   )
 }

@@ -1,6 +1,8 @@
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import Link from "next/link"
 
 type EventType = "Montaż" | "Dostawa" | "Spotkanie" | "Odbiór"
 
@@ -54,18 +56,19 @@ const events: ScheduleEvent[] = [
   },
 ]
 
+// Opacity-based badge colors — work in both light and dark
 const typeStyle: Record<EventType, string> = {
-  "Montaż":   "bg-blue-50 text-blue-700 border-blue-200",
-  "Dostawa":  "bg-amber-50 text-amber-700 border-amber-200",
-  "Spotkanie":"bg-purple-50 text-purple-700 border-purple-200",
-  "Odbiór":   "bg-green-50 text-green-700 border-green-200",
+  "Montaż":    "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  "Dostawa":   "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  "Spotkanie": "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  "Odbiór":    "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
 }
 
 const dotColor: Record<EventType, string> = {
-  "Montaż":   "bg-blue-400",
-  "Dostawa":  "bg-amber-400",
-  "Spotkanie":"bg-purple-400",
-  "Odbiór":   "bg-green-400",
+  "Montaż":    "bg-blue-400",
+  "Dostawa":   "bg-amber-400",
+  "Spotkanie": "bg-purple-400",
+  "Odbiór":    "bg-emerald-400",
 }
 
 // Group events by date
@@ -77,15 +80,27 @@ const grouped = events.reduce<Record<string, ScheduleEvent[]>>((acc, event) => {
 
 export function ScheduleTimeline() {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
-      <div className="flex divide-x divide-zinc-100">
+    <div className="rounded-2xl bg-background border border-border overflow-hidden">
+      <div className="flex items-center justify-between px-3 pt-3 pb-3">
+        <p className="text-sm text-muted-foreground">Schedule</p>
+        <Link
+          href="/schedule"
+          className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          View all
+          <HugeiconsIcon icon={ArrowRight01Icon} size={12} />
+        </Link>
+      </div>
+
+      <div className="mx-3 mb-3 rounded-xl bg-card overflow-hidden">
+        <div className="flex divide-x divide-border">
         {Object.entries(grouped).map(([date, dayEvents], groupIndex) => (
           <div key={date} className="flex-1 min-w-0">
             {/* Day header */}
-            <div className="px-4 py-2 border-b border-zinc-100 bg-zinc-50">
-              <p className="text-xs font-semibold text-zinc-900">{date}</p>
-              <p className="text-[11px] text-zinc-400">
-                {groupIndex === 0 ? "Dzisiaj" : "Jutro"}
+            <div className="px-4 py-2 border-b border-border bg-muted/40">
+              <p className="text-xs font-semibold text-foreground">{date}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {groupIndex === 0 ? "Today" : "Tomorrow"}
               </p>
             </div>
 
@@ -95,23 +110,23 @@ export function ScheduleTimeline() {
                 <div key={i}>
                   <div className="flex items-start gap-3 px-4 py-3">
                     {/* Time */}
-                    <span className="w-10 shrink-0 text-xs font-medium text-zinc-400 pt-0.5">
+                    <span className="w-10 shrink-0 text-xs font-medium text-muted-foreground pt-0.5">
                       {event.time}
                     </span>
 
-                    {/* Dot + line */}
+                    {/* Dot + connector line */}
                     <div className="flex flex-col items-center pt-1.5 shrink-0">
                       <div className={cn("size-2 rounded-full shrink-0", dotColor[event.type])} />
                       {i < dayEvents.length - 1 && (
-                        <div className="w-px flex-1 bg-zinc-100 mt-1" style={{ minHeight: "1.5rem" }} />
+                        <div className="w-px flex-1 bg-border mt-1" style={{ minHeight: "1.5rem" }} />
                       )}
                     </div>
 
                     {/* Content */}
                     <div className="min-w-0 flex-1 flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-zinc-900 truncate">{event.title}</p>
-                        <p className="text-xs text-zinc-400 truncate">{event.client}</p>
+                        <p className="truncate text-sm font-medium text-foreground">{event.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{event.client}</p>
                       </div>
                       <Badge
                         variant="outline"
@@ -122,13 +137,14 @@ export function ScheduleTimeline() {
                     </div>
                   </div>
                   {i < dayEvents.length - 1 && (
-                    <Separator className="bg-zinc-50 ml-4" />
+                    <div className="border-b border-border/50 ml-4" />
                   )}
                 </div>
               ))}
             </div>
           </div>
         ))}
+        </div>
       </div>
     </div>
   )

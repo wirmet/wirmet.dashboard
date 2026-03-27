@@ -46,10 +46,22 @@ Small construction business owners with no technical background. The UI must be 
 ## Design Guidelines
 
 - Minimalist and clean style
-- Light mode is primary, dark mode supported via next-themes
+- **Dark mode is primary** — defaultTheme="dark" in theme-provider; light mode still supported
 - Always match Figma designs exactly
 - UI must be simple enough for non-technical construction workers
 - No unnecessary features or complexity
+
+## Dashboard Inspiration (applied March 2026)
+
+Reference: Square UI by indev-ui (square.indev.me)
+![inspiration](/Users/maya/Downloads/G9BIWXXXIAAh-xF.jpeg)
+
+Key patterns applied from this inspiration:
+- Sidebar as a **floating card** — uses shadcn `variant="floating"` (adds p-2 padding + rounded-lg + ring, no border-r separator)
+- Very dark main background (`oklch(0.10)`) so the sidebar card visually "floats" inside it
+- Sidebar card background (`oklch(0.16)`) — noticeably lighter than bg but still dark
+- Theme toggle icon on the **left side of TopBar**, next to the sidebar trigger
+- TopBar blends with the dark background (`dark:bg-zinc-950`)
 
 ## Component Rules
 
@@ -98,6 +110,28 @@ Always use this pattern for `DropdownMenuContent` — light mode forced via CSS 
 - Icons go directly inside `DropdownMenuItem` with no extra wrapper
 - Destructive action uses `variant="destructive"` — no manual color classes
 - CSS variables force light mode regardless of active theme
+
+## Button Style
+
+Always use `size="lg"` for action buttons in page headers and top bars. Icons use `data-icon="inline-start"` (never `size` prop on the icon itself):
+
+```tsx
+// Primary action (filled)
+<Button variant="default" size="lg">
+  <HugeiconsIcon icon={SomeIcon} data-icon="inline-start" />
+  Zaplanuj transport
+</Button>
+
+// Secondary action (outlined)
+<Button variant="outline" size="lg">
+  <HugeiconsIcon icon={SomeIcon} data-icon="inline-start" />
+  Dodaj klienta
+</Button>
+```
+
+- `size="lg"` everywhere in headers/top bars — never `sm` or `default` size
+- `data-icon="inline-start"` on the icon — never manual size classes on icons inside buttons
+- Primary CTA: `variant="default"`, supporting actions: `variant="outline"`
 
 ## Claude Behavior Rules
 

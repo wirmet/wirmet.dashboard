@@ -1,5 +1,9 @@
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import Link from "next/link"
 
 type ShipmentStatus = "In transit" | "Delivered" | "Pending"
 
@@ -47,47 +51,47 @@ const shipments: Shipment[] = [
   },
 ]
 
-const accentColor: Record<ShipmentStatus, string> = {
+// Small status dot color
+const dotColor: Record<ShipmentStatus, string> = {
   "In transit": "bg-blue-400",
-  "Delivered":  "bg-green-400",
-  "Pending":    "bg-zinc-300",
+  "Delivered":  "bg-emerald-400",
+  "Pending":    "bg-muted-foreground/40",
 }
 
-const badgeStyle: Record<ShipmentStatus, string> = {
-  "In transit": "bg-blue-50 text-blue-700 border-blue-200",
-  "Delivered":  "bg-green-50 text-green-700 border-green-200",
-  "Pending":    "bg-zinc-100 text-zinc-600 border-zinc-200",
+// Opacity-based badge colors — work in both light and dark
+const badgeClass: Record<ShipmentStatus, string> = {
+  "In transit": "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  "Delivered":  "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  "Pending":    "bg-zinc-500/10 text-muted-foreground border-zinc-500/20",
 }
 
 export function CurrentShipments() {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
-      {shipments.map((s, index) => (
-        <div
-          key={s.id}
-          className={cn(
-            "flex items-center gap-4 px-4 py-3",
-            index !== shipments.length - 1 && "border-b border-zinc-100"
-          )}
-        >
-          {/* Status accent bar */}
-          <div className={cn("h-8 w-1 shrink-0 rounded-full", accentColor[s.status])} />
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-semibold text-foreground">Wysyłki</p>
+        <Button variant="outline" size="sm" asChild className="rounded-full">
+          <Link href="/shipments">
+            Wszystkie
+            <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
+          </Link>
+        </Button>
+      </div>
 
-          {/* Main content */}
-          <div className="flex flex-1 items-center justify-between gap-4 min-w-0">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-zinc-900 truncate">{s.client}</p>
-              <p className="text-xs text-zinc-400 truncate">{s.id} · {s.carrier} · {s.date}</p>
+      <div className="flex flex-col gap-2">
+        {shipments.map((s) => (
+          <div key={s.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+            <div className={cn("size-2 shrink-0 rounded-full", dotColor[s.status])} />
+            <div className="flex-1 min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">{s.client}</p>
+              <p className="text-xs text-muted-foreground">{s.id} · {s.carrier}</p>
             </div>
-            <Badge
-              variant="outline"
-              className={cn("shrink-0 text-[11px]", badgeStyle[s.status])}
-            >
+            <Badge variant="outline" className={cn("shrink-0 text-[11px]", badgeClass[s.status])}>
               {s.status}
             </Badge>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }

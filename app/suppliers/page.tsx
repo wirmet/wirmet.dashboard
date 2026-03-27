@@ -178,7 +178,7 @@ export default function SuppliersPage() {
               />
             </div>
 
-            <Button variant="brand" size="lg">
+            <Button variant="default" size="lg">
               <HugeiconsIcon icon={Add01Icon} size={14} />
               Add Supplier
             </Button>
