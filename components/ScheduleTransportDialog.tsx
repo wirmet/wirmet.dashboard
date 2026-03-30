@@ -139,7 +139,7 @@ export function ScheduleTransportDialog() {
 
   return (
     <>
-      <Button variant="default" size="lg" onClick={() => setOpen(true)}>
+      <Button variant="outline" size="lg" onClick={() => setOpen(true)}>
         <HugeiconsIcon icon={DeliveryTruck01Icon} data-icon="inline-start" />
         Zaplanuj transport
       </Button>

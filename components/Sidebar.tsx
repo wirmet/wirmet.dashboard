@@ -58,25 +58,25 @@ import {
 
 // Top-level folders inside the Files module — shown as collapsible sub-items
 const fileFolders = [
-  { label: "Offers 2025", href: "/files?folder=offers-2025" },
-  { label: "Projects Archive", href: "/files?folder=projects" },
-  { label: "Supplier Docs", href: "/files?folder=suppliers" },
-  { label: "Invoices", href: "/files?folder=invoices" },
+  { label: "Oferty 2025", href: "/files?folder=offers-2025" },
+  { label: "Archiwum projektów", href: "/files?folder=projects" },
+  { label: "Dokumenty dostawców", href: "/files?folder=suppliers" },
+  { label: "Faktury", href: "/files?folder=invoices" },
 ]
 
 const mainNavItems = [
   { label: "Dashboard", icon: Home01Icon, href: "/" },
-  { label: "Offers", icon: Invoice01Icon, href: "/offers" },
-  { label: "Orders", icon: ShoppingCart01Icon, href: "/orders" },
-  { label: "Shipments", icon: DeliveryTruck01Icon, href: "/shipments" },
-  { label: "Schedule", icon: Calendar01Icon, href: "/schedule" },
+  { label: "Oferty", icon: Invoice01Icon, href: "/offers" },
+  { label: "Realizacje", icon: ShoppingCart01Icon, href: "/orders" },
+  { label: "Wysyłki", icon: DeliveryTruck01Icon, href: "/shipments" },
+  { label: "Terminarz", icon: Calendar01Icon, href: "/schedule" },
 ]
 
 const managementNavItems = [
-  { label: "Suppliers", icon: UserGroupIcon, href: "/suppliers" },
-  { label: "Customers", icon: UserIcon, href: "/customers" },
-  { label: "Inventory", icon: Package01Icon, href: "/inventory" },
-  { label: "Warehouse", icon: WarehouseIcon, href: "/warehouse" },
+  { label: "Dostawcy", icon: UserGroupIcon, href: "/suppliers" },
+  { label: "Klienci", icon: UserIcon, href: "/customers" },
+  { label: "Spis towaru", icon: Package01Icon, href: "/inventory" },
+  { label: "Magazyn", icon: WarehouseIcon, href: "/warehouse" },
 ]
 
 // Shared nav button style — uses sidebar CSS vars for theme compatibility
@@ -136,7 +136,7 @@ function FilesNavItem({ pathname }: { pathname: string }) {
             className={cn(navButtonClass, "w-full")}
           >
             <HugeiconsIcon icon={open ? FolderOpenIcon : Folder01Icon} size={16} />
-            <span>Files</span>
+            <span>Pliki</span>
             {/* Arrow rotates 90° when open */}
             <HugeiconsIcon
               icon={ArrowRight01Icon}
@@ -148,6 +148,20 @@ function FilesNavItem({ pathname }: { pathname: string }) {
 
         <CollapsibleContent>
           <SidebarMenuSub>
+            {/* "Wszystkie" — goes to the full files view with folders + loose files */}
+            <SidebarMenuSubItem>
+              <SidebarMenuSubButton
+                asChild
+                isActive={pathname === "/files"}
+                className="text-sidebar-foreground/50 hover:text-sidebar-foreground data-[active=true]:text-sidebar-foreground"
+              >
+                <Link href="/files">
+                  <HugeiconsIcon icon={FolderOpenIcon} size={14} />
+                  <span>Wszystkie</span>
+                </Link>
+              </SidebarMenuSubButton>
+            </SidebarMenuSubItem>
+
             {fileFolders.map((folder) => (
               <SidebarMenuSubItem key={folder.href}>
                 <SidebarMenuSubButton
@@ -207,9 +221,9 @@ export function AppSidebar() {
       {/* Main navigation */}
       <SidebarContent className="py-4">
         {/* Main group — plain items */}
-        <NavGroup label="Main" items={mainNavItems} pathname={pathname} />
+        <NavGroup label="Główne" items={mainNavItems} pathname={pathname} />
 
-        {/* Files — separate group with collapsible sub-folders */}
+        {/* Pliki — oddzielna grupa z rozwijanymi podfolderami */}
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -218,8 +232,8 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Management group */}
-        <NavGroup label="Management" items={managementNavItems} pathname={pathname} />
+        {/* Zarządzanie */}
+        <NavGroup label="Zarządzanie" items={managementNavItems} pathname={pathname} />
       </SidebarContent>
 
       {/* Bottom: user profile only — Settings & Help moved into the dropdown */}
@@ -274,25 +288,25 @@ export function AppSidebar() {
               <DropdownMenuItem asChild>
                 <Link href="/profile">
                   <HugeiconsIcon icon={UserEdit01Icon} size={14} />
-                  Edit profile
+                  Edytuj profil
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/settings">
                   <HugeiconsIcon icon={Settings01Icon} size={14} />
-                  Settings
+                  Ustawienia
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/help">
                   <HugeiconsIcon icon={HelpCircleIcon} size={14} />
-                  Help
+                  Pomoc
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive">
                 <HugeiconsIcon icon={Logout01Icon} size={14} />
-                Sign out
+                Wyloguj się
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

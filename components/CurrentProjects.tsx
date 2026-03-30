@@ -15,7 +15,7 @@ import {
   PencilEdit01Icon,
   ArrowRight01Icon,
   CheckmarkCircle01Icon,
-  Add01Icon,
+  Folder01Icon,
   Invoice01Icon,
   Wrench01Icon,
   Calendar01Icon,
@@ -32,104 +32,21 @@ import {
 import { cn } from "@/lib/utils"
 import { useState } from "react"
 import Link from "next/link"
+import { useProjects, type ProjectStatus, type Project } from "@/components/ProjectsContext"
+import { AddProjectDialog } from "@/components/AddProjectDialog"
 
-type Status = "Ordered" | "Paid"
+// ─── Status badge ──────────────────────────────────────────────────────────────
+// Paid → wirmet-green (positive), Ordered → wirmet-blue (in progress)
 
-interface OrderItem {
-  name: string
-  quantity: number
-  unit: string
-  unitPrice: number
-}
-
-interface Project {
-  client: string
-  deadline: string
-  status: Status
-  type: string
-  address: string
-  offerNumber: string
-  companyName: string
-  nip: string
-  companyAddress: string
-  orderDate: string
-  paymentDue: string
-  deliveryDate: string
-  completionDate: string
-  items: OrderItem[]
-}
-
-const projects: Project[] = [
-  {
-    client: "Marek Wiśniewski",
-    deadline: "Due 20 Mar 2025",
-    status: "Ordered",
-    type: "Installation",
-    address: "ul. Różana 12, 30-001 Kraków",
-    offerNumber: "Offer #2603001",
-    companyName: "Wiśniewski Budownictwo",
-    nip: "PL 6782345678",
-    companyAddress: "ul. Różana 12, 30-001 Kraków",
-    orderDate: "3 Mar 2025",
-    paymentDue: "17 Mar 2025",
-    deliveryDate: "18 Mar 2025",
-    completionDate: "20 Mar 2025",
-    items: [
-      { name: "System balustrad stalowych", quantity: 12, unit: "m", unitPrice: 185 },
-      { name: "Wsporniki montażowe", quantity: 24, unit: "szt", unitPrice: 18 },
-      { name: "Robocizna montażowa", quantity: 8, unit: "h", unitPrice: 120 },
-    ],
-  },
-  {
-    client: "Budmax Sp. z o.o.",
-    deadline: "Due 25 Mar 2025",
-    status: "Paid",
-    type: "Delivery",
-    address: "ul. Przemysłowa 8, 00-450 Warszawa",
-    offerNumber: "Offer #2603002",
-    companyName: "Budmax Sp. z o.o.",
-    nip: "PL 5252345678",
-    companyAddress: "ul. Fabryczna 4, 00-446 Warszawa",
-    orderDate: "8 Mar 2025",
-    paymentDue: "22 Mar 2025",
-    deliveryDate: "25 Mar 2025",
-    completionDate: "25 Mar 2025",
-    items: [
-      { name: "Bloczki betonowe B20", quantity: 400, unit: "szt", unitPrice: 4.5 },
-      { name: "Worki z piaskiem 25 kg", quantity: 60, unit: "szt", unitPrice: 12 },
-      { name: "Opłata za dostawę", quantity: 1, unit: "ryczałt", unitPrice: 350 },
-    ],
-  },
-  {
-    client: "Anna Kowalczyk",
-    deadline: "Due 1 Apr 2025",
-    status: "Ordered",
-    type: "Installation",
-    address: "ul. Słoneczna 3, 50-100 Wrocław",
-    offerNumber: "Offer #2603003",
-    companyName: "Anna Kowalczyk — prywatny",
-    nip: "—",
-    companyAddress: "ul. Słoneczna 3, 50-100 Wrocław",
-    orderDate: "12 Mar 2025",
-    paymentDue: "28 Mar 2025",
-    deliveryDate: "30 Mar 2025",
-    completionDate: "1 Apr 2025",
-    items: [
-      { name: "Rama okienna 140×120", quantity: 3, unit: "szt", unitPrice: 640 },
-      { name: "Piana izolacyjna", quantity: 6, unit: "szt", unitPrice: 22 },
-      { name: "Robocizna montażowa", quantity: 6, unit: "h", unitPrice: 120 },
-    ],
-  },
-]
-
-function StatusBadge({ status }: { status: Status }) {
+function StatusBadge({ status }: { status: ProjectStatus }) {
   return (
     <Badge
       variant="outline"
       className={cn(
+        "text-[11px]",
         status === "Paid"
-          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-          : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+          ? "bg-wirmet-green/10 text-wirmet-green border-wirmet-green/20"
+          : "bg-wirmet-blue/10  text-wirmet-blue  border-wirmet-blue/20"
       )}
     >
       {status}
@@ -137,7 +54,16 @@ function StatusBadge({ status }: { status: Status }) {
   )
 }
 
-// Icon + label on the left, value right-aligned — inspired by "Transaction details" rows
+// ─── Type accent strip ─────────────────────────────────────────────────────────
+// Left vertical bar on each project row — colored by work type, mirrors stat-card gradient bars
+
+const typeAccent: Record<string, string> = {
+  "Installation": "bg-wirmet-orange",
+  "Delivery":     "bg-wirmet-blue",
+}
+
+// ─── Icon row (detail dialog) ──────────────────────────────────────────────────
+
 function IconRow({
   icon,
   label,
@@ -155,12 +81,12 @@ function IconRow({
         <HugeiconsIcon icon={icon} size={14} className="shrink-0 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">{label}</span>
       </div>
-      <div className="text-sm font-medium text-foreground">
-        {children}
-      </div>
+      <div className="text-sm font-medium text-foreground">{children}</div>
     </div>
   )
 }
+
+// ─── Project detail dialog ─────────────────────────────────────────────────────
 
 function ProjectDialog({ project }: { project: Project }) {
   const total = project.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
@@ -196,7 +122,7 @@ function ProjectDialog({ project }: { project: Project }) {
           </p>
         </div>
 
-        {/* Offer info + status — borders added manually to skip line after Numer oferty */}
+        {/* Offer info + status */}
         <div className="overflow-hidden rounded-xl bg-card">
           <IconRow icon={Invoice01Icon} label="Numer oferty">{project.offerNumber}</IconRow>
           <IconRow icon={CheckmarkCircle01Icon} label="Status" className="border-t border-border">
@@ -240,7 +166,6 @@ function ProjectDialog({ project }: { project: Project }) {
                 </p>
               </div>
             ))}
-            {/* Total row */}
             <div className="flex items-center justify-between px-4 py-3">
               <p className="text-sm font-semibold text-foreground">Razem</p>
               <p className="text-sm font-bold text-foreground">{totalFixed} zł</p>
@@ -250,7 +175,7 @@ function ProjectDialog({ project }: { project: Project }) {
 
       </div>
 
-      {/* Footer — actions */}
+      {/* Footer */}
       <div className="flex items-center justify-between border-t border-border px-5 py-4">
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon-sm">
@@ -272,15 +197,94 @@ function ProjectDialog({ project }: { project: Project }) {
   )
 }
 
+// ─── Deadline sort helper ──────────────────────────────────────────────────────
+// Parses "Due 20 Mar 2025" → Date so we can sort ascending (most urgent first)
+
+function parseDeadline(deadline: string): number {
+  return new Date(deadline.replace("Due ", "")).getTime()
+}
+
+// ─── Project row ───────────────────────────────────────────────────────────────
+// flex:1 on each row so they fill the container equally — height stays fixed
+// regardless of how many projects are shown (container height driven by right column)
+
+function ProjectRow({
+  project,
+  onClick,
+}: {
+  project: Project
+  onClick: () => void
+}) {
+  const total = project.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+  const accent = typeAccent[project.type] ?? "bg-muted-foreground/30"
+
+  return (
+    <div
+      onClick={onClick}
+      // flex:1 makes every row the same height; justify-center keeps content centred
+      // vertically when the row is taller (fewer than 5 projects)
+      style={{ flex: 1 }}
+      className="relative flex flex-col justify-center gap-2 py-3 pl-9 pr-5 cursor-pointer transition-colors hover:bg-muted/20"
+    >
+      {/* Left accent strip — mirrors the horizontal gradient bar on stat cards */}
+      <div className={cn("absolute left-5 top-1/4 bottom-1/4 w-[3px] rounded-full", accent)} />
+
+      {/* Top row: work type label + status badge */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {project.type}
+        </span>
+        <StatusBadge status={project.status} />
+      </div>
+
+      {/* Client name — primary identifier */}
+      <p className="text-sm font-semibold leading-tight text-foreground">{project.client}</p>
+
+      {/* Meta row: offer number · deadline · value */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="shrink-0">{project.offerNumber}</span>
+          <span className="text-muted-foreground/40">·</span>
+          <span className="truncate">{project.deadline}</span>
+        </div>
+        {total > 0 && (
+          <span className="shrink-0 text-xs font-semibold tabular-nums text-foreground">
+            {total.toLocaleString("pl-PL")} zł
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── CurrentProjects ───────────────────────────────────────────────────────────
+
 export function CurrentProjects() {
+  const { projects } = useProjects()
   const [selected, setSelected] = useState<Project | null>(null)
+
+  // Sort ascending by deadline (nearest = most urgent first), cap at 5
+  const visible = [...projects]
+    .sort((a, b) => parseDeadline(a.deadline) - parseDeadline(b.deadline))
+    .slice(0, 5)
+
+  // Empty slots fill the remaining space so the component is always the same height
+  const emptySlots = Math.max(0, 5 - visible.length)
 
   return (
     <>
-      <div className="flex-1 flex flex-col">
-        {/* Section header */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-base font-semibold text-foreground">Aktualne realizacje</p>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Green 2px gradient bar — same language as stat cards, links this section to "Realizacje w toku" */}
+        <div className="h-[2px] bg-gradient-to-r from-wirmet-green to-wirmet-green/0" />
+
+        {/* Section header — folder icon tinted green mirrors the stat card above */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div className="flex items-center gap-2">
+            <HugeiconsIcon icon={Folder01Icon} size={14} className="shrink-0 text-wirmet-green" />
+            <p className="font-[family-name:var(--font-display)] text-sm font-semibold text-foreground">
+              Realizacje w toku
+            </p>
+          </div>
           <Link
             href="/orders"
             className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -290,39 +294,27 @@ export function CurrentProjects() {
           </Link>
         </div>
 
-        {/* Vertical list of project cards */}
-        <div className="flex flex-col gap-3 flex-1">
-          {projects.map((project) => (
-            <div
-              key={project.client}
+        {/* Project rows + empty state — flex-1 on each row keeps them equal height.
+            Empty state gets flex = number of missing slots so the visual weight matches. */}
+        <div className="flex flex-1 flex-col divide-y divide-border overflow-hidden">
+          {visible.map((project) => (
+            <ProjectRow
+              key={project.offerNumber}
+              project={project}
               onClick={() => setSelected(project)}
-              className="rounded-xl border border-border bg-card p-4 cursor-pointer transition-colors hover:bg-muted/30 flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground">{project.deadline}</span>
-                <StatusBadge status={project.status} />
-              </div>
-              <p className="text-sm font-semibold text-foreground">{project.client}</p>
-              <div className="flex items-center gap-2 min-w-0">
-                <Badge variant="outline" className="text-[11px] shrink-0">{project.type}</Badge>
-                <span className="text-xs text-muted-foreground shrink-0">{project.offerNumber}</span>
-                <span className="text-xs text-muted-foreground shrink-0">·</span>
-                <span className="truncate text-xs text-muted-foreground">{project.address}</span>
-              </div>
-            </div>
+            />
           ))}
 
-          {/* End-of-list indicator — fills remaining height */}
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border min-h-[80px]">
-            <div className="flex flex-col items-center gap-2">
-              <HugeiconsIcon icon={CheckmarkCircle01Icon} size={22} className="text-muted-foreground" />
-              <p className="text-xs text-muted-foreground/50">Brak więcej aktualnych realizacji</p>
+          {emptySlots > 0 && (
+            <div
+              style={{ flex: emptySlots }}
+              className="flex flex-col items-center justify-center gap-3 px-5 py-4"
+            >
+              <HugeiconsIcon icon={CheckmarkCircle01Icon} size={20} className="text-muted-foreground/30" />
+              <p className="text-xs text-muted-foreground/40">Brak więcej aktualnych realizacji</p>
+              <AddProjectDialog />
             </div>
-            <Button variant="outline" size="lg">
-              <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" className="text-white" />
-              Nowa realizacja
-            </Button>
-          </div>
+          )}
         </div>
       </div>
 

@@ -5,6 +5,11 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+    /* ── Wirmet brand palette (inspired by Anthropic) ─────────────────────── */
+    --wirmet-orange: oklch(0.65 0.13 40);    /* #d97757 — primary accent */
+    --wirmet-blue:   oklch(0.64 0.07 240);   /* #6a9bcc — secondary accent */
+    --wirmet-green:  oklch(0.57 0.07 130);   /* #788c5d — tertiary / positive */
+
     /* Tailwind v4 neutral scale — elevation: neutral-200 → neutral-50 → neutral-100 */
     --background: oklch(0.970 0 0);   /* neutral-100 — outer background + sidebar */
     --foreground: oklch(0.145 0 0);   /* neutral-950 */
@@ -43,10 +48,11 @@
 
 .dark {
     /* Elevation hierarchy: background → surface → card → muted */
-    --background: oklch(0.10 0 0);
+    /* Slightly warm undertone (hue 80) to match Anthropic brand dark #141413 */
+    --background: oklch(0.09 0.003 80);
     --foreground: oklch(0.985 0 0);
-    --surface: oklch(0.14 0 0);   /* content panel — sits above background */
-    --card: oklch(0.20 0 0);       /* inner UI cards — elevated above surface */
+    --surface: oklch(0.13 0.003 80);   /* content panel — sits above background */
+    --card: oklch(0.19 0.003 80);      /* inner UI cards — elevated above surface */
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.20 0 0);
     --popover-foreground: oklch(0.985 0 0);
@@ -80,6 +86,10 @@
 
 @theme inline {
     --font-sans: var(--font-sans);
+    --font-display: var(--font-display);
+    --color-wirmet-orange: var(--wirmet-orange);
+    --color-wirmet-blue:   var(--wirmet-blue);
+    --color-wirmet-green:  var(--wirmet-green);
     --color-surface: var(--surface);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);

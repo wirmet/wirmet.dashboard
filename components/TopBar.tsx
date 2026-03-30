@@ -2,12 +2,13 @@
 
 import * as React from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Add01Icon, Moon01Icon, Sun01Icon, HelpCircleIcon } from "@hugeicons/core-free-icons"
+import { Moon01Icon, Sun01Icon, HelpCircleIcon } from "@hugeicons/core-free-icons"
 import { useTheme } from "next-themes"
 import { useTopBarContext } from "@/components/TopBarContext"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
+import { AddOfferDialog } from "@/components/AddOfferDialog"
 import Link from "next/link"
 
 export function TopBar() {
@@ -39,10 +40,7 @@ export function TopBar() {
 
       {/* Right: actions */}
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="lg">
-          <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />
-          Nowa oferta
-        </Button>
+        <AddOfferDialog />
 
         {/* Visual divider between action and utility icons */}
         <div className="flex items-center py-1.5 self-stretch">

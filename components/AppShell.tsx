@@ -8,9 +8,15 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { UserProvider } from "@/components/UserContext"
 import { ShipmentsProvider } from "@/components/ShipmentsContext"
 import { CustomersProvider } from "@/components/CustomersContext"
+import { EventsProvider } from "@/components/EventsContext"
+import { OffersProvider } from "@/components/OffersContext"
+import { ProjectsProvider } from "@/components/ProjectsContext"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
+    <OffersProvider>
+    <ProjectsProvider>
+    <EventsProvider>
     <CustomersProvider>
     <ShipmentsProvider>
     <UserProvider>
@@ -28,5 +34,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </UserProvider>
     </ShipmentsProvider>
     </CustomersProvider>
+    </EventsProvider>
+    </ProjectsProvider>
+    </OffersProvider>
   )
 }

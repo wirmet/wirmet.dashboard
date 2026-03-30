@@ -1,4 +1,4 @@
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import { Geist_Mono, Inter, Poppins } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -8,6 +8,13 @@ import { cn } from "@/lib/utils"
 import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+
+// Display font — used for large headings and section titles
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
+})
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
@@ -27,7 +34,8 @@ export default function RootLayout({
         "antialiased",
         fontMono.variable,
         "font-sans",
-        inter.variable
+        inter.variable,
+        poppins.variable,
       )}
     >
       <body>
