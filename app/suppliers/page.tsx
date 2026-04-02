@@ -26,16 +26,16 @@ import {
 } from "@/components/ui/table"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  Add01Icon,
   Search01Icon,
-  UserGroupIcon,
+  Store01Icon,
   ArrowUp01Icon,
   ArrowDown01Icon,
   ArrowDown02Icon,
   MoreVerticalIcon,
-  EyeIcon,
   PencilEdit01Icon,
   Delete01Icon,
+  Settings01Icon,
+  Add01Icon,
 } from "@hugeicons/core-free-icons"
 import {
   DropdownMenu,
@@ -45,38 +45,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
+import { useSuppliers, type Supplier } from "@/components/SuppliersContext"
+import { AddSupplierDialog } from "@/components/AddSupplierDialog"
+import { EditSupplierDialog } from "@/components/EditSupplierDialog"
+import { SupplierTypesModal } from "@/components/SupplierTypesModal"
+import { toast } from "sonner"
 
-type SupplierType = "Materiały budowlane" | "Narzędzia" | "Instalacje" | "Transport"
 type SortDirection = "asc" | "desc"
-type SortColumn = "name" | "nip" | "address" | "contact" | "phone" | "type"
-
-interface Supplier {
-  name: string
-  nip: string
-  address: string
-  contact: string
-  phone: string
-  type: SupplierType
-}
-
-const suppliers: Supplier[] = [
-  { name: "Budmat Sp. z o.o.",    nip: "PL 7811234567", address: "ul. Fabryczna 12, Warszawa",     contact: "Tomasz Kowalski",      phone: "+48 601 234 567", type: "Materiały budowlane" },
-  { name: "Stalbet S.A.",         nip: "PL 5261098765", address: "ul. Hutnicza 4, Kraków",          contact: "Marcin Lewandowski",   phone: "+48 602 345 678", type: "Materiały budowlane" },
-  { name: "ProNarz Sp. j.",       nip: "PL 6341876543", address: "ul. Rzemieślnicza 8, Wrocław",    contact: "Anna Wiśniewska",      phone: "+48 603 456 789", type: "Narzędzia" },
-  { name: "InstalPro",            nip: "PL 8521654321", address: "ul. Elektryczna 3, Poznań",       contact: "Piotr Zając",          phone: "+48 604 567 890", type: "Instalacje" },
-  { name: "TransBud Logistyka",   nip: "PL 9431543210", address: "ul. Spedycyjna 22, Gdańsk",       contact: "Katarzyna Nowak",      phone: "+48 605 678 901", type: "Transport" },
-]
-
-const ALL_TYPES: SupplierType[] = ["Materiały budowlane", "Narzędzia", "Instalacje", "Transport"]
-
-// Opacity-based colors — work in both light and dark mode
-const typeStyle: Record<SupplierType, string> = {
-  "Materiały budowlane": "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  "Narzędzia":           "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  "Instalacje":          "bg-violet-500/10 text-violet-400 border-violet-500/20",
-  "Transport":           "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-}
+type SortColumn = "name" | "nip" | "address" | "contact" | "phone"
 
 const PAGE_SIZE = 16
 
@@ -86,7 +73,6 @@ const columns: { key: SortColumn; label: string }[] = [
   { key: "address", label: "Adres" },
   { key: "contact", label: "Kontakt" },
   { key: "phone",   label: "Telefon" },
-  { key: "type",    label: "Typ" },
 ]
 
 function SortIcon({ column, sortColumn, sortDirection }: {
@@ -97,20 +83,31 @@ function SortIcon({ column, sortColumn, sortDirection }: {
   const isActive = sortColumn === column
   return (
     <span className="flex flex-col gap-px">
-      <HugeiconsIcon icon={ArrowUp01Icon} size={10} className={isActive && sortDirection === "asc" ? "text-foreground" : "text-muted-foreground/40"} />
+      <HugeiconsIcon icon={ArrowUp01Icon}   size={10} className={isActive && sortDirection === "asc"  ? "text-foreground" : "text-muted-foreground/40"} />
       <HugeiconsIcon icon={ArrowDown01Icon} size={10} className={isActive && sortDirection === "desc" ? "text-foreground" : "text-muted-foreground/40"} />
     </span>
   )
 }
 
 export default function SuppliersPage() {
-  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
-  const [typeFilters, setTypeFilters] = useState<SupplierType[]>([])
-  const [search, setSearch] = useState("")
-  const [page, setPage] = useState(1)
+  const { suppliers, supplierTypes, deleteSupplier, getType } = useSuppliers()
+
+  const [sortColumn,     setSortColumn]     = useState<SortColumn | null>(null)
+  const [sortDirection,  setSortDirection]  = useState<SortDirection>("asc")
+  const [typeFilters,    setTypeFilters]    = useState<string[]>([])   // type ids
+  const [search,         setSearch]         = useState("")
+  const [page,           setPage]           = useState(1)
+  const [typesModalOpen,  setTypesModalOpen]  = useState(false)
+  const [editSupplier,    setEditSupplier]    = useState<Supplier | null>(null)
+  const [deleteCandidate, setDeleteCandidate] = useState<Supplier | null>(null)
 
   useEffect(() => { setPage(1) }, [typeFilters, search, sortColumn, sortDirection])
+
+  // Drop stale filters when types are deleted
+  useEffect(() => {
+    const validIds = new Set(supplierTypes.map((t) => t.id))
+    setTypeFilters((prev) => prev.filter((id) => validIds.has(id)))
+  }, [supplierTypes])
 
   function handleSort(column: SortColumn) {
     if (sortColumn === column) {
@@ -121,15 +118,22 @@ export default function SuppliersPage() {
     }
   }
 
-  function toggleType(type: SupplierType) {
+  function toggleType(id: string) {
     setTypeFilters((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
     )
+  }
+
+  function confirmDelete() {
+    if (!deleteCandidate) return
+    deleteSupplier(deleteCandidate.id)
+    toast.success(`Usunięto dostawcę: ${deleteCandidate.name}`)
+    setDeleteCandidate(null)
   }
 
   const filtered = useMemo(() => {
     let rows = suppliers
-    if (typeFilters.length > 0) rows = rows.filter((s) => typeFilters.includes(s.type))
+    if (typeFilters.length > 0) rows = rows.filter((s) => typeFilters.includes(s.typeId))
     if (search) {
       const q = search.toLowerCase()
       rows = rows.filter(
@@ -141,31 +145,31 @@ export default function SuppliersPage() {
     }
     if (!sortColumn) return rows
     return [...rows].sort((a, b) => {
-      const valA = a[sortColumn].toLowerCase()
-      const valB = b[sortColumn].toLowerCase()
+      const valA = (a[sortColumn] ?? "").toLowerCase()
+      const valB = (b[sortColumn] ?? "").toLowerCase()
       if (valA < valB) return sortDirection === "asc" ? -1 : 1
       if (valA > valB) return sortDirection === "asc" ? 1 : -1
       return 0
     })
-  }, [typeFilters, search, sortColumn, sortDirection])
+  }, [suppliers, typeFilters, search, sortColumn, sortDirection])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <>
-      <PageSetup title="Suppliers" icon={UserGroupIcon} />
+      <PageSetup title="Dostawcy" icon={Store01Icon} />
 
       <div className="flex flex-col gap-4 p-8">
 
-        {/* Filter bar */}
+        {/* Pasek filtrów */}
         <div className="flex shrink-0 items-center gap-2">
 
-          {/* Type multi-select */}
+          {/* Filtr typów — z opcją zarządzania */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="lg">
-                Type
+                Typ
                 {typeFilters.length > 0 && (
                   <Badge variant="secondary" className="ml-1 rounded-full px-1.5 text-[10px]">
                     {typeFilters.length}
@@ -174,47 +178,76 @@ export default function SuppliersPage() {
                 <HugeiconsIcon icon={ArrowDown02Icon} data-icon="inline-end" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              {ALL_TYPES.map((t) => (
-                <DropdownMenuCheckboxItem
-                  key={t}
-                  checked={typeFilters.includes(t)}
-                  onCheckedChange={() => toggleType(t)}
+            <DropdownMenuContent align="start" className="w-52">
+              {supplierTypes.length === 0 ? (
+                <DropdownMenuItem
+                  onClick={() => setTypesModalOpen(true)}
+                  className="flex items-center gap-2 text-wirmet-orange focus:text-wirmet-orange"
                 >
-                  {t}
-                </DropdownMenuCheckboxItem>
-              ))}
-              {typeFilters.length > 0 && (
+                  <HugeiconsIcon icon={Add01Icon} size={13} />
+                  Dodaj pierwszy typ…
+                </DropdownMenuItem>
+              ) : (
                 <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setTypeFilters([])}>Clear filter</DropdownMenuItem>
+                  {supplierTypes.map((t) => (
+                    <DropdownMenuCheckboxItem
+                      key={t.id}
+                      checked={typeFilters.includes(t.id)}
+                      onCheckedChange={() => toggleType(t.id)}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: t.color }} />
+                        {t.name}
+                      </span>
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                  {typeFilters.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setTypeFilters([])}>
+                        Wyczyść filtr
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </>
               )}
+              <DropdownMenuSeparator />
+              {/* Zarządzaj typami — opens the modal */}
+              <DropdownMenuItem
+                onClick={() => setTypesModalOpen(true)}
+                className="text-muted-foreground"
+              >
+                <HugeiconsIcon icon={Settings01Icon} size={13} />
+                Zarządzaj typami…
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Search + add */}
-          <div className="ml-auto flex items-center gap-2">
-            <InputGroup className="h-8 w-56">
-              <InputGroupAddon align="inline-start">
-                <HugeiconsIcon icon={Search01Icon} />
-              </InputGroupAddon>
-              <InputGroupInput
-                type="search"
-                placeholder="Search suppliers..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </InputGroup>
+          {/* Wyszukiwarka */}
+          <InputGroup className="h-8 w-56">
+            <InputGroupAddon align="inline-start">
+              <HugeiconsIcon icon={Search01Icon} />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              placeholder="Szukaj dostawcy…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </InputGroup>
 
-            <Button variant="default" size="lg">
-              <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />
-              Add Supplier
+          {/* Edytuj typy + dodaj — prawa strona */}
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="outline" size="lg" onClick={() => setTypesModalOpen(true)}>
+              <HugeiconsIcon icon={Settings01Icon} data-icon="inline-start" />
+              Edytuj typy
             </Button>
+
+            <AddSupplierDialog />
           </div>
         </div>
 
-        {/* Table */}
+        {/* Tabela */}
         <div className="rounded-xl border border-border bg-card overflow-hidden [&_[data-slot=table-container]]:overflow-x-visible">
           <Table>
             <TableHeader>
@@ -234,66 +267,78 @@ export default function SuppliersPage() {
                     </div>
                   </TableHead>
                 ))}
+                <TableHead>Typ</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginated.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="py-12 text-center text-sm text-muted-foreground">
-                    No suppliers found.
+                  <TableCell colSpan={columns.length + 2} className="py-12 text-center text-sm text-muted-foreground">
+                    Brak dostawców.
                   </TableCell>
                 </TableRow>
               ) : (
-                paginated.map((s) => (
-                  <TableRow key={s.nip} className="cursor-pointer">
-                    <TableCell className="pl-5 font-medium text-foreground">{s.name}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{s.nip}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[200px] truncate">{s.address}</TableCell>
-                    <TableCell className="text-muted-foreground">{s.contact}</TableCell>
-                    <TableCell className="text-muted-foreground">{s.phone}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn("text-[11px]", typeStyle[s.type])}>
-                        {s.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right pr-3">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
-                            <HugeiconsIcon icon={MoreVerticalIcon} size={16} />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-36">
-                          <DropdownMenuItem>
-                            <HugeiconsIcon icon={EyeIcon} size={14} />
-                            View
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem variant="destructive">
-                            <HugeiconsIcon icon={Delete01Icon} size={14} />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
+                paginated.map((s) => {
+                  const type = getType(s.typeId)
+                  return (
+                    <TableRow key={s.id} className="cursor-pointer">
+                      <TableCell className="pl-5 font-medium text-foreground">{s.name}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{s.nip || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground max-w-[180px] truncate">{s.address || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{s.contact || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{s.phone || "—"}</TableCell>
+                      <TableCell>
+                        {type ? (
+                          <Badge
+                            variant="outline"
+                            className="text-[11px]"
+                            style={{
+                              backgroundColor: `${type.color}1a`,
+                              color: type.color,
+                              borderColor: `${type.color}33`,
+                            }}
+                          >
+                            {type.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/40">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right pr-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                              <HugeiconsIcon icon={MoreVerticalIcon} size={16} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-36">
+                            <DropdownMenuItem onClick={() => setEditSupplier(s)}>
+                              <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
+                              Edytuj
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem variant="destructive" onClick={() => setDeleteCandidate(s)}>
+                              <HugeiconsIcon icon={Delete01Icon} size={14} />
+                              Usuń
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>
         </div>
 
-        {/* Pagination */}
+        {/* Paginacja */}
         <div className="flex shrink-0 items-center justify-between">
           <p className="text-xs text-muted-foreground">
             {filtered.length === 0
-              ? "No results"
-              : <>Showing <span className="font-medium text-foreground">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of <span className="font-medium text-foreground">{filtered.length}</span> suppliers</>
+              ? "Brak wyników"
+              : <>Wyświetlono <span className="font-medium text-foreground">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> z <span className="font-medium text-foreground">{filtered.length}</span> dostawców</>
             }
           </p>
           <Pagination className="w-auto mx-0">
@@ -307,7 +352,7 @@ export default function SuppliersPage() {
               </PaginationItem>
               <PaginationItem>
                 <span className="px-3 text-xs text-muted-foreground">
-                  Page {page} of {totalPages}
+                  Strona {page} z {totalPages}
                 </span>
               </PaginationItem>
               <PaginationItem>
@@ -322,6 +367,36 @@ export default function SuppliersPage() {
         </div>
 
       </div>
+
+      {/* Types management modal */}
+      <SupplierTypesModal open={typesModalOpen} onOpenChange={setTypesModalOpen} />
+
+      <EditSupplierDialog
+        supplier={editSupplier}
+        open={editSupplier !== null}
+        onOpenChange={(open) => { if (!open) setEditSupplier(null) }}
+      />
+
+      {/* Potwierdzenie usunięcia */}
+      <AlertDialog open={deleteCandidate !== null} onOpenChange={(open) => { if (!open) setDeleteCandidate(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usunąć dostawcę?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Czy na pewno chcesz usunąć <span className="font-medium text-foreground">{deleteCandidate?.name}</span>? Tej operacji nie można cofnąć.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Usuń
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

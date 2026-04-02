@@ -11,9 +11,13 @@ import { CustomersProvider } from "@/components/CustomersContext"
 import { EventsProvider } from "@/components/EventsContext"
 import { OffersProvider } from "@/components/OffersContext"
 import { ProjectsProvider } from "@/components/ProjectsContext"
+import { SettingsProvider } from "@/components/SettingsContext"
+import { SuppliersProvider } from "@/components/SuppliersContext"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
+    <SettingsProvider>
+    <SuppliersProvider>
     <OffersProvider>
     <ProjectsProvider>
     <EventsProvider>
@@ -37,5 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </EventsProvider>
     </ProjectsProvider>
     </OffersProvider>
+    </SuppliersProvider>
+    </SettingsProvider>
   )
 }

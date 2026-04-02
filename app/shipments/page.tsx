@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { PageSetup } from "@/components/PageSetup"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -124,7 +125,8 @@ export default function ShipmentsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
   const [statusFilters, setStatusFilters] = useState<ShipmentStatus[]>([])
   const [carrierFilters, setCarrierFilters] = useState<string[]>([])
-  const [search, setSearch] = useState("")
+  const searchParams = useSearchParams()
+  const [search, setSearch] = useState(() => searchParams.get("q") ?? "")
   const [page, setPage] = useState(1)
   const [deleteTarget, setDeleteTarget] = useState<Shipment | null>(null)
 
@@ -297,7 +299,7 @@ export default function ShipmentsPage() {
               {paginated.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={columns.length + 2} className="py-12 text-center text-sm text-muted-foreground">
-                    No shipments found.
+                    Brak transportów.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -334,11 +336,11 @@ export default function ShipmentsPage() {
                         <DropdownMenuContent align="end" className="w-36">
                           <DropdownMenuItem>
                             <HugeiconsIcon icon={EyeIcon} size={14} />
-                            View
+                            Podgląd
                           </DropdownMenuItem>
                           <DropdownMenuItem>
                             <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
-                            Edit
+                            Edytuj
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -346,7 +348,7 @@ export default function ShipmentsPage() {
                             onClick={() => setDeleteTarget(s)}
                           >
                             <HugeiconsIcon icon={Delete01Icon} size={14} />
-                            Delete
+                            Usuń
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -362,8 +364,8 @@ export default function ShipmentsPage() {
         <div className="flex shrink-0 items-center justify-between">
           <p className="text-xs text-muted-foreground">
             {filtered.length === 0
-              ? "No results"
-              : <>Showing <span className="font-medium text-foreground">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of <span className="font-medium text-foreground">{filtered.length}</span> shipments</>
+              ? "Brak wyników"
+              : <>Wyświetlono <span className="font-medium text-foreground">{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> z <span className="font-medium text-foreground">{filtered.length}</span> transportów</>
             }
           </p>
           <Pagination className="w-auto mx-0">
@@ -377,7 +379,7 @@ export default function ShipmentsPage() {
               </PaginationItem>
               <PaginationItem>
                 <span className="px-3 text-xs text-muted-foreground">
-                  Page {page} of {totalPages}
+                  Strona {page} z {totalPages}
                 </span>
               </PaginationItem>
               <PaginationItem>

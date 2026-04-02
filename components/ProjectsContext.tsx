@@ -107,6 +107,8 @@ interface AddProjectData {
 interface ProjectsContextValue {
   projects: Project[]
   addProject: (data: AddProjectData) => void
+  deleteProject: (offerNumber: string) => void
+  updateProject: (offerNumber: string, updates: Partial<Project>) => void
 }
 
 const ProjectsContext = React.createContext<ProjectsContextValue | null>(null)
@@ -152,9 +154,17 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     ])
   }, [])
 
+  const deleteProject = React.useCallback((offerNumber: string) => {
+    setProjects(prev => prev.filter(p => p.offerNumber !== offerNumber))
+  }, [])
+
+  const updateProject = React.useCallback((offerNumber: string, updates: Partial<Project>) => {
+    setProjects(prev => prev.map(p => p.offerNumber === offerNumber ? { ...p, ...updates } : p))
+  }, [])
+
   const value = React.useMemo<ProjectsContextValue>(
-    () => ({ projects, addProject }),
-    [projects, addProject]
+    () => ({ projects, addProject, deleteProject, updateProject }),
+    [projects, addProject, deleteProject, updateProject]
   )
 
   return <ProjectsContext.Provider value={value}>{children}</ProjectsContext.Provider>

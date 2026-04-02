@@ -32,23 +32,23 @@ export function AddCustomerDialog() {
     email: "",
   }
   const [form, setForm] = useState(emptyForm)
-  const [contactError, setContactError] = useState(false)
+  const [companyError, setCompanyError] = useState(false)
 
   function handleOpenChange(isOpen: boolean) {
     setOpen(isOpen)
     if (!isOpen) {
       setForm(emptyForm)
-      setContactError(false)
+      setCompanyError(false)
     }
   }
 
   function handleSubmit() {
-    if (!form.contact.trim()) {
-      setContactError(true)
+    if (!form.company.trim()) {
+      setCompanyError(true)
       return
     }
     addCustomer({
-      name: form.contact,      // name = display name, same as contact person
+      name: form.contact || form.company,
       company: form.company,
       nip: form.nip,
       address: form.address,
@@ -78,13 +78,19 @@ export function AddCustomerDialog() {
             {/* Company + NIP */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Nazwa firmy</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Nazwa firmy <span className="text-destructive">*</span>
+                </label>
                 <Input
                   className={inputLg}
                   placeholder="np. MW Budownictwo"
                   value={form.company}
-                  onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                  onChange={(e) => { setForm((f) => ({ ...f, company: e.target.value })); setCompanyError(false) }}
+                  aria-invalid={companyError ? true : undefined}
                 />
+                {companyError && (
+                  <p className="text-[11px] text-destructive">Podaj nazwę firmy.</p>
+                )}
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-muted-foreground">NIP</label>
@@ -108,24 +114,15 @@ export function AddCustomerDialog() {
               />
             </div>
 
-            {/* Contact person — required */}
+            {/* Contact person — optional */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">
-                Osoba kontaktowa <span className="text-destructive">*</span>
-              </label>
+              <label className="text-xs font-medium text-muted-foreground">Osoba kontaktowa</label>
               <Input
                 className={inputLg}
                 placeholder="np. Marek Wiśniewski"
                 value={form.contact}
-                onChange={(e) => {
-                  setForm((f) => ({ ...f, contact: e.target.value }))
-                  setContactError(false)
-                }}
-                aria-invalid={contactError ? true : undefined}
+                onChange={(e) => setForm((f) => ({ ...f, contact: e.target.value }))}
               />
-              {contactError && (
-                <p className="text-[11px] text-destructive">Podaj osobę kontaktową.</p>
-              )}
             </div>
 
             {/* Phone + Email */}

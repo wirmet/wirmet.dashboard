@@ -37,13 +37,19 @@ import { useOffers, type OfferStatus, type PendingOffer } from "@/components/Off
 const dotColor: Record<OfferStatus, string> = {
   "Do wyceny":             "bg-wirmet-orange/70",
   "Do wysłania":           "bg-wirmet-blue/70",
-  "Oczekuje na odpowiedź": "bg-muted-foreground/30",
+  "Wysłana":               "bg-wirmet-green/70",
+  "Oczekuje na odpowiedź": "bg-amber-400/60",
+  "Follow-up":             "bg-rose-400/70",
+  "Odrzucona":             "bg-muted-foreground/30",
 }
 
 const badgeClass: Record<OfferStatus, string> = {
   "Do wyceny":             "bg-wirmet-orange/10 text-wirmet-orange border-wirmet-orange/20",
-  "Do wysłania":           "bg-wirmet-blue/10  text-wirmet-blue  border-wirmet-blue/20",
-  "Oczekuje na odpowiedź": "bg-zinc-500/10 text-muted-foreground border-zinc-500/20",
+  "Do wysłania":           "bg-wirmet-blue/10 text-wirmet-blue border-wirmet-blue/20",
+  "Wysłana":               "bg-wirmet-green/10 text-wirmet-green border-wirmet-green/20",
+  "Oczekuje na odpowiedź": "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  "Follow-up":             "bg-rose-500/10 text-rose-400 border-rose-500/20",
+  "Odrzucona":             "bg-zinc-500/10 text-muted-foreground border-zinc-500/20",
 }
 
 // ─── Icon row (detail dialog) ──────────────────────────────────────────────────

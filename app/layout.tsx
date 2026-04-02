@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TopBarProvider } from "@/components/TopBarContext"
 import { AppShell } from "@/components/AppShell"
+import { ProductsProvider } from "@/components/ProductsContext"
 import { cn } from "@/lib/utils"
 import { Toaster } from "@/components/ui/sonner"
 
@@ -41,7 +42,9 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <TopBarProvider>
-            <AppShell>{children}</AppShell>
+            <ProductsProvider>
+              <AppShell>{children}</AppShell>
+            </ProductsProvider>
           </TopBarProvider>
           <Toaster position="bottom-center" />
         </ThemeProvider>
