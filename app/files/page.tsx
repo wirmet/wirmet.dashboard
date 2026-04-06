@@ -707,8 +707,8 @@ function FileRow({ file, onDelete, onRename, onCopy }: {
 
 // ─── Folder view ───────────────────────────────────────────────────────────────
 
-function FolderView({ folderKey, onBack, categoryFolders, projectFolders, onNewFolder, onNewKartoteka, fileInputRef }: {
-  folderKey: string; onBack: () => void
+function FolderView({ folderKey, onBack, onNavigate, categoryFolders, projectFolders, onNewFolder, onNewKartoteka, fileInputRef }: {
+  folderKey: string; onBack: () => void; onNavigate: (key: string) => void
   categoryFolders: FolderItem[]; projectFolders: FolderItem[]
   onNewFolder: () => void; onNewKartoteka: () => void
   fileInputRef: React.RefObject<HTMLInputElement | null>
@@ -819,7 +819,7 @@ function FolderView({ folderKey, onBack, categoryFolders, projectFolders, onNewF
             ) : view === "grid" ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {visibleSubFolders.map((f) => (
-                  <FolderCard key={f.key} folder={f} view="grid" onClick={() => {}}
+                  <FolderCard key={f.key} folder={f} view="grid" onClick={() => onNavigate(f.key)}
                     onDelete={() => setDeleteTarget({ kind: "folder", key: f.key, name: f.name })}
                     onRename={() => setRenameTarget({ kind: "folder", key: f.key, currentName: f.name })}
                     onCopy={() => setSubFolders((p) => { const i = p.findIndex((x) => x.key === f.key); const copy = duplicateFolder(f); const next = [...p]; next.splice(i + 1, 0, copy); return next })}
@@ -830,7 +830,7 @@ function FolderView({ folderKey, onBack, categoryFolders, projectFolders, onNewF
             ) : (
               <div className="overflow-hidden rounded-2xl border border-border bg-card divide-y divide-border">
                 {visibleSubFolders.map((f) => (
-                  <FolderCard key={f.key} folder={f} view="list" onClick={() => {}}
+                  <FolderCard key={f.key} folder={f} view="list" onClick={() => onNavigate(f.key)}
                     onDelete={() => setDeleteTarget({ kind: "folder", key: f.key, name: f.name })}
                     onRename={() => setRenameTarget({ kind: "folder", key: f.key, currentName: f.name })}
                     onCopy={() => setSubFolders((p) => { const i = p.findIndex((x) => x.key === f.key); const copy = duplicateFolder(f); const next = [...p]; next.splice(i + 1, 0, copy); return next })}
@@ -1132,6 +1132,7 @@ function FilesInner() {
           {...sharedProps}
           folderKey={folderParam}
           onBack={() => router.push("/files")}
+          onNavigate={(key) => router.push(`/files?folder=${key}`)}
           categoryFolders={categoryFolders}
           projectFolders={projectFolders}
         />

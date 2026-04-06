@@ -13,7 +13,7 @@ interface TopBarContextValue {
 const TopBarContext = React.createContext<TopBarContextValue | null>(null)
 
 export function TopBarProvider({ children }: { children: React.ReactNode }) {
-  const [title, setTitle] = React.useState("Dashboard")
+  const [title, setTitle] = React.useState("Pulpit")
   const [icon, setIcon] = React.useState<IconSvgElement | null>(null)
 
   const value = React.useMemo(

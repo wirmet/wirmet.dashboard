@@ -43,10 +43,10 @@ const STATUSES: { value: ShipmentStatus; label: string }[] = [
   { value: "Nowe",           label: "Nowe" },
   { value: "Przygotowywane", label: "Przygotowywane" },
   { value: "Do wysłania",    label: "Do wysłania" },
-  { value: "Pending",        label: "Oczekuje" },
-  { value: "In transit",     label: "W drodze" },
+  { value: "Oczekująca",     label: "Oczekująca" },
+  { value: "W transporcie",  label: "W transporcie" },
   { value: "Wstrzymane",     label: "Wstrzymane" },
-  { value: "Delivered",      label: "Dostarczone" },
+  { value: "Dostarczone",    label: "Dostarczone" },
 ]
 
 // Mirrors the current projects — in a real app this would come from a shared store.
@@ -88,7 +88,7 @@ export function ScheduleTransportDialog() {
     orderId: "",
     trackingId: "",
     carrier: "",
-    status: "Pending" as ShipmentStatus,
+    status: "Oczekująca" as ShipmentStatus,
   }
   const [form, setForm] = useState(emptyForm)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())

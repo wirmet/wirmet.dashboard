@@ -5,6 +5,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { TopBarProvider } from "@/components/TopBarContext"
 import { AppShell } from "@/components/AppShell"
 import { ProductsProvider } from "@/components/ProductsContext"
+import { TeamMembersProvider } from "@/components/TeamMembersContext"
+import { CategoriesProvider } from "@/components/CategoriesContext"
 import { cn } from "@/lib/utils"
 import { Toaster } from "@/components/ui/sonner"
 
@@ -43,7 +45,11 @@ export default function RootLayout({
         <ThemeProvider>
           <TopBarProvider>
             <ProductsProvider>
-              <AppShell>{children}</AppShell>
+              <TeamMembersProvider>
+                <CategoriesProvider>
+                  <AppShell>{children}</AppShell>
+                </CategoriesProvider>
+              </TeamMembersProvider>
             </ProductsProvider>
           </TopBarProvider>
           <Toaster position="bottom-center" />

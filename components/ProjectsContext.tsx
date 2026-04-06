@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-export type ProjectStatus = "Ordered" | "Paid"
+export type ProjectStatus = "Zamówione" | "Opłacone"
 
 export interface OrderItem {
   name: string
@@ -32,18 +32,18 @@ export interface Project {
 const initialProjects: Project[] = [
   {
     client: "Marek Wiśniewski",
-    deadline: "Due 20 Mar 2025",
-    status: "Ordered",
-    type: "Installation",
+    deadline: "Termin: 20 mar 2026",
+    status: "Zamówione",
+    type: "Montaż",
     address: "ul. Różana 12, 30-001 Kraków",
-    offerNumber: "Offer #2603001",
+    offerNumber: "Oferta #2603001",
     companyName: "Wiśniewski Budownictwo",
     nip: "PL 6782345678",
     companyAddress: "ul. Różana 12, 30-001 Kraków",
-    orderDate: "3 Mar 2025",
-    paymentDue: "17 Mar 2025",
-    deliveryDate: "18 Mar 2025",
-    completionDate: "20 Mar 2025",
+    orderDate: "3 mar 2026",
+    paymentDue: "17 mar 2026",
+    deliveryDate: "18 mar 2026",
+    completionDate: "20 mar 2026",
     items: [
       { name: "System balustrad stalowych", quantity: 12, unit: "m", unitPrice: 185 },
       { name: "Wsporniki montażowe", quantity: 24, unit: "szt", unitPrice: 18 },
@@ -52,18 +52,18 @@ const initialProjects: Project[] = [
   },
   {
     client: "Budmax Sp. z o.o.",
-    deadline: "Due 25 Mar 2025",
-    status: "Paid",
-    type: "Delivery",
+    deadline: "Termin: 25 mar 2026",
+    status: "Opłacone",
+    type: "Dostawa",
     address: "ul. Przemysłowa 8, 00-450 Warszawa",
-    offerNumber: "Offer #2603002",
+    offerNumber: "Oferta #2603002",
     companyName: "Budmax Sp. z o.o.",
     nip: "PL 5252345678",
     companyAddress: "ul. Fabryczna 4, 00-446 Warszawa",
-    orderDate: "8 Mar 2025",
-    paymentDue: "22 Mar 2025",
-    deliveryDate: "25 Mar 2025",
-    completionDate: "25 Mar 2025",
+    orderDate: "8 mar 2026",
+    paymentDue: "22 mar 2026",
+    deliveryDate: "25 mar 2026",
+    completionDate: "25 mar 2026",
     items: [
       { name: "Bloczki betonowe B20", quantity: 400, unit: "szt", unitPrice: 4.5 },
       { name: "Worki z piaskiem 25 kg", quantity: 60, unit: "szt", unitPrice: 12 },
@@ -72,18 +72,18 @@ const initialProjects: Project[] = [
   },
   {
     client: "Anna Kowalczyk",
-    deadline: "Due 1 Apr 2025",
-    status: "Ordered",
-    type: "Installation",
+    deadline: "Termin: 1 kwi 2026",
+    status: "Zamówione",
+    type: "Montaż",
     address: "ul. Słoneczna 3, 50-100 Wrocław",
-    offerNumber: "Offer #2603003",
+    offerNumber: "Oferta #2603003",
     companyName: "Anna Kowalczyk — prywatny",
     nip: "—",
     companyAddress: "ul. Słoneczna 3, 50-100 Wrocław",
-    orderDate: "12 Mar 2025",
-    paymentDue: "28 Mar 2025",
-    deliveryDate: "30 Mar 2025",
-    completionDate: "1 Apr 2025",
+    orderDate: "12 mar 2026",
+    paymentDue: "28 mar 2026",
+    deliveryDate: "30 mar 2026",
+    completionDate: "1 kwi 2026",
     items: [
       { name: "Rama okienna 140×120", quantity: 3, unit: "szt", unitPrice: 640 },
       { name: "Piana izolacyjna", quantity: 6, unit: "szt", unitPrice: 22 },
@@ -121,7 +121,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const addProject = React.useCallback((data: AddProjectData) => {
     const now = new Date()
     const fmt = (d: Date) =>
-      d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+      d.toLocaleDateString("pl-PL", { day: "numeric", month: "short", year: "numeric" })
 
     const orderDate = fmt(now)
     const paymentDueDate = new Date(now)
@@ -131,13 +131,13 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     const yr  = String(now.getFullYear()).slice(2)
     const mo  = String(now.getMonth() + 1).padStart(2, "0")
     const seq = String(counterRef.current++).padStart(3, "0")
-    const offerNumber = data.offerNumber?.trim() || `Offer #${yr}${mo}${seq}`
+    const offerNumber = data.offerNumber?.trim() || `Oferta #${yr}${mo}${seq}`
 
     setProjects((prev) => [
       ...prev,
       {
         client:        data.client,
-        deadline:      `Due ${data.completionDate}`,
+        deadline:      `Termin: ${data.completionDate}`,
         status:        data.status,
         type:          data.type,
         address:       data.address,

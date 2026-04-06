@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react"
 import {
   Home01Icon,
@@ -56,16 +56,17 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-// Top-level folders inside the Files module — shown as collapsible sub-items
+// Kartoteki (category folders) inside the Files module — keys must match files/page.tsx
 const fileFolders = [
-  { label: "Oferty 2025", href: "/files?folder=offers-2025" },
-  { label: "Archiwum projektów", href: "/files?folder=projects" },
-  { label: "Dokumenty dostawców", href: "/files?folder=suppliers" },
-  { label: "Faktury", href: "/files?folder=invoices" },
+  { label: "Oferty 2026",         key: "offers-2026" },
+  { label: "Oferty 2025",         key: "offers-2025" },
+  { label: "Archiwum realizacji", key: "projects"    },
+  { label: "Dokumenty dostawców", key: "suppliers"   },
+  { label: "Faktury",             key: "invoices"    },
 ]
 
 const mainNavItems = [
-  { label: "Dashboard", icon: Home01Icon, href: "/" },
+  { label: "Pulpit", icon: Home01Icon, href: "/" },
   { label: "Oferty", icon: Invoice01Icon, href: "/offers" },
   { label: "Realizacje", icon: ShoppingCart01Icon, href: "/orders" },
   { label: "Wysyłki", icon: DeliveryTruck01Icon, href: "/shipments" },
@@ -121,8 +122,10 @@ function NavGroup({
   )
 }
 
-// Files section with collapsible top-level folders
+// Files section with collapsible kartoteki folders
 function FilesNavItem({ pathname }: { pathname: string }) {
+  const searchParams  = useSearchParams()
+  const folderParam   = searchParams.get("folder")
   const isFilesActive = pathname === "/files" || pathname.startsWith("/files")
   const [open, setOpen] = React.useState(isFilesActive)
 
@@ -132,7 +135,7 @@ function FilesNavItem({ pathname }: { pathname: string }) {
         <CollapsibleTrigger asChild>
           <SidebarMenuButton
             isActive={isFilesActive && !open}
-            tooltip="Files"
+            tooltip="Pliki"
             className={cn(navButtonClass, "w-full")}
           >
             <HugeiconsIcon icon={open ? FolderOpenIcon : Folder01Icon} size={16} />
@@ -148,11 +151,11 @@ function FilesNavItem({ pathname }: { pathname: string }) {
 
         <CollapsibleContent>
           <SidebarMenuSub>
-            {/* "Wszystkie" — goes to the full files view with folders + loose files */}
+            {/* "Wszystkie" — active only when no folder param is set */}
             <SidebarMenuSubItem>
               <SidebarMenuSubButton
                 asChild
-                isActive={pathname === "/files"}
+                isActive={pathname === "/files" && !folderParam}
                 className="text-sidebar-foreground/50 hover:text-sidebar-foreground data-[active=true]:text-sidebar-foreground"
               >
                 <Link href="/files">
@@ -162,14 +165,20 @@ function FilesNavItem({ pathname }: { pathname: string }) {
               </SidebarMenuSubButton>
             </SidebarMenuSubItem>
 
+            {/* Kartoteki label */}
+            <p className="px-2 pt-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/30">
+              Kartoteki
+            </p>
+
+            {/* Category folders — isActive checks folder query param, not the full href */}
             {fileFolders.map((folder) => (
-              <SidebarMenuSubItem key={folder.href}>
+              <SidebarMenuSubItem key={folder.key}>
                 <SidebarMenuSubButton
                   asChild
-                  isActive={pathname === folder.href}
+                  isActive={pathname === "/files" && folderParam === folder.key}
                   className="text-sidebar-foreground/50 hover:text-sidebar-foreground data-[active=true]:text-sidebar-foreground"
                 >
-                  <Link href={folder.href}>
+                  <Link href={`/files?folder=${folder.key}`}>
                     <HugeiconsIcon icon={Folder01Icon} size={14} />
                     <span>{folder.label}</span>
                   </Link>
@@ -206,14 +215,14 @@ export function AppSidebar() {
             W
           </div>
           {!isCollapsed && (
-            <>
-              <span className="flex-1 truncate font-semibold text-sidebar-foreground">
+            <div className="flex flex-1 min-w-0 items-center gap-1.5">
+              <span className="truncate font-semibold text-sidebar-foreground">
                 Wirmet
               </span>
-              <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-400 whitespace-nowrap">
+              <span className="shrink-0 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 whitespace-nowrap">
                 PRO
               </span>
-            </>
+            </div>
           )}
         </div>
       </SidebarHeader>
@@ -227,7 +236,9 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              <FilesNavItem pathname={pathname} />
+              <React.Suspense fallback={null}>
+                <FilesNavItem pathname={pathname} />
+              </React.Suspense>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

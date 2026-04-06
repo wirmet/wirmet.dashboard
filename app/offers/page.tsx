@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { PageSetup } from "@/components/PageSetup"
 import { Button } from "@/components/ui/button"
@@ -49,9 +49,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import type { IconSvgElement } from "@hugeicons/react"
 import {
   Invoice01Icon,
-  CheckmarkCircle01Icon,
   MailSend01Icon,
-  Building01Icon,
   UserIcon,
   SmartPhone01Icon,
   Mail01Icon,
@@ -266,7 +264,9 @@ function OfferDetailDialog({ offer, open, onOpenChange, onEdit, onDelete }: {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4">
-          <p className="text-sm font-semibold text-foreground">Szczegóły oferty</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Oferta
+          </p>
           <DialogClose asChild>
             <Button variant="ghost" size="icon-sm">
               <HugeiconsIcon icon={Cancel01Icon} data-icon strokeWidth={2} />
@@ -277,26 +277,29 @@ function OfferDetailDialog({ offer, open, onOpenChange, onEdit, onDelete }: {
         {/* Body */}
         <div className="flex flex-col gap-3 overflow-y-auto px-4 pb-4">
 
-          {/* Offer number hero */}
-          <div className="rounded-xl bg-card px-5 py-4">
-            <p className="mb-1.5 text-xs text-muted-foreground">Numer oferty</p>
-            <p className="text-2xl font-semibold text-muted-foreground">{offer.number}</p>
+          {/* Hero — company + number + status */}
+          <div className="overflow-hidden rounded-xl bg-card">
+            <div className="h-[2px] bg-gradient-to-r from-wirmet-orange to-wirmet-orange/0" />
+            <div className="px-5 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-[family-name:var(--font-display)] text-lg font-bold leading-snug text-foreground">
+                  {offer.company}
+                </p>
+                <Badge variant="outline" className={cn("shrink-0 mt-0.5 text-[11px]", badgeClass[offer.status])}>
+                  {offer.status}
+                </Badge>
+              </div>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">{offer.number}</p>
+              <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+                <span>Utworzona: {offer.created}</span>
+                <span className="text-muted-foreground/30">·</span>
+                <span>Ważna do: {offer.validUntil}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Status + dates */}
+          {/* Contact details */}
           <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
-            <IconRow icon={Invoice01Icon} label="Data utworzenia">{offer.created}</IconRow>
-            <IconRow icon={Calendar01Icon} label="Ważna do">{offer.validUntil}</IconRow>
-            <IconRow icon={CheckmarkCircle01Icon} label="Status">
-              <Badge variant="outline" className={cn("text-[11px]", badgeClass[offer.status])}>
-                {offer.status}
-              </Badge>
-            </IconRow>
-          </div>
-
-          {/* Contact */}
-          <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
-            <IconRow icon={Building01Icon} label="Firma">{offer.company}</IconRow>
             <IconRow icon={UserIcon} label="Osoba kontaktowa">{offer.contact}</IconRow>
             <IconRow icon={SmartPhone01Icon} label="Telefon">{offer.phone}</IconRow>
             <IconRow icon={Mail01Icon} label="E-mail">{offer.email}</IconRow>
@@ -306,7 +309,9 @@ function OfferDetailDialog({ offer, open, onOpenChange, onEdit, onDelete }: {
           {/* Description */}
           {offer.description && (
             <div className="flex flex-col gap-2">
-              <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Opis</p>
+              <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Opis
+              </p>
               <div className="rounded-xl bg-card px-4 py-3">
                 <p className="text-sm text-muted-foreground">{offer.description}</p>
               </div>
@@ -316,26 +321,26 @@ function OfferDetailDialog({ offer, open, onOpenChange, onEdit, onDelete }: {
           {/* Items */}
           {hasItems && (
             <div className="flex flex-col gap-2">
-              <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Pozycje i usługi
               </p>
               <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
                 {offer.items.map((item, i) => (
                   <div key={i} className="flex items-center justify-between px-4 py-3">
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 pr-4">
                       <p className="text-sm font-medium text-foreground">{item.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {item.quantity} {item.unit} × {item.unitPrice.toFixed(2)} zł
                       </p>
                     </div>
-                    <p className="shrink-0 pl-4 text-sm font-semibold text-foreground">
+                    <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
                       {(item.quantity * item.unitPrice).toFixed(2)} zł
                     </p>
                   </div>
                 ))}
-                <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center justify-between bg-muted/20 px-4 py-3">
                   <p className="text-sm font-semibold text-foreground">Razem</p>
-                  <p className="text-sm font-bold text-foreground">{formatPrice(total)} zł</p>
+                  <p className="text-sm font-bold tabular-nums text-foreground">{formatPrice(total)} zł</p>
                 </div>
               </div>
             </div>
@@ -621,7 +626,7 @@ function EmptyState() {
 
 // ─── Page ────────────────────────────────────────────────────────────────────────
 
-export default function OffertyPage() {
+function OffertyPageInner() {
   const { offers, deleteOffer, updateOffer } = useOffers()
   const searchParams = useSearchParams()
 
@@ -791,4 +796,8 @@ export default function OffertyPage() {
       )}
     </div>
   )
+}
+
+export default function OffertyPage() {
+  return <Suspense><OffertyPageInner /></Suspense>
 }

@@ -30,20 +30,18 @@ import {
   CalendarAdd01Icon,
   Calendar01Icon,
   Location01Icon,
+  Settings01Icon,
+  UserAdd01Icon,
+  Cancel01Icon,
 } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useCustomers } from "@/components/CustomersContext"
 import { useEvents, type EventType } from "@/components/EventsContext"
+import { useTeamMembers } from "@/components/TeamMembersContext"
+import { useCategories } from "@/components/CategoriesContext"
 
 // ─── Options ──────────────────────────────────────────────────────────────────
-
-const EVENT_TYPES = [
-  { value: "spotkanie",      label: "Spotkanie"      },
-  { value: "montaz",         label: "Montaż"         },
-  { value: "wizja lokalna",  label: "Wizja lokalna"  },
-  { value: "przeglad",       label: "Przegląd"       },
-] as const
 
 const EVENT_STATUSES = [
   { value: "zaplanowane", label: "Zaplanowane" },
@@ -52,13 +50,18 @@ const EVENT_STATUSES = [
   { value: "anulowane",   label: "Anulowane"   },
 ] as const
 
-const TEAM_MEMBERS = [
-  "Adam Wiśniewski",
-  "Piotr Kowalski",
-  "Marek Jabłoński",
-  "Tomasz Nowak",
-  "Rafał Zając",
+// Color palette available when creating custom categories
+const COLOR_OPTIONS = [
+  { name: "rose",   bg: "bg-rose-400",   color: "bg-rose-500/15 text-rose-400 border-rose-500/25",     dot: "bg-rose-400"   },
+  { name: "orange", bg: "bg-orange-400", color: "bg-orange-500/15 text-orange-400 border-orange-500/25", dot: "bg-orange-400" },
+  { name: "teal",   bg: "bg-teal-400",   color: "bg-teal-500/15 text-teal-400 border-teal-500/25",     dot: "bg-teal-400"   },
+  { name: "indigo", bg: "bg-indigo-400", color: "bg-indigo-500/15 text-indigo-400 border-indigo-500/25", dot: "bg-indigo-400" },
+  { name: "pink",   bg: "bg-pink-400",   color: "bg-pink-500/15 text-pink-400 border-pink-500/25",     dot: "bg-pink-400"   },
+  { name: "lime",   bg: "bg-lime-400",   color: "bg-lime-500/15 text-lime-400 border-lime-500/25",     dot: "bg-lime-400"   },
 ]
+
+// Seed category values that cannot be deleted
+const SEED_CATEGORIES = ["spotkanie", "montaz", "wizja lokalna", "przeglad"]
 
 // Matches SelectTrigger size="lg"
 const inputLg = "h-9 px-3 text-sm md:text-sm"
@@ -80,11 +83,22 @@ function dateToISO(date: Date) {
 }
 
 export function AddEventDialog() {
-  const { customers } = useCustomers()
-  const { addEvent }  = useEvents()
+  const { customers }            = useCustomers()
+  const { addEvent }             = useEvents()
+  const { members, addMember, removeMember } = useTeamMembers()
+  const { categories, addCategory, removeCategory } = useCategories()
 
   const [open, setOpen] = useState(false)
   const [calendarOpen, setCalendarOpen] = useState(false)
+
+  // Category management panel state
+  const [managingCategories, setManagingCategories] = useState(false)
+  const [newCatLabel, setNewCatLabel] = useState("")
+  const [selectedColor, setSelectedColor] = useState(COLOR_OPTIONS[0])
+
+  // Team member management panel state
+  const [managingMembers, setManagingMembers] = useState(false)
+  const [newMemberName, setNewMemberName] = useState("")
 
   const emptyForm = {
     title:      "",
@@ -107,6 +121,11 @@ export function AddEventDialog() {
       setForm(emptyForm)
       setErrors({ title: false, customerId: false, type: false })
       setCalendarOpen(false)
+      setManagingCategories(false)
+      setManagingMembers(false)
+      setNewCatLabel("")
+      setNewMemberName("")
+      setSelectedColor(COLOR_OPTIONS[0])
     }
   }
 
@@ -119,6 +138,22 @@ export function AddEventDialog() {
       address: customer?.address ?? f.address,
     }))
     setErrors((e) => ({ ...e, customerId: false }))
+  }
+
+  function handleAddCategory() {
+    const label = newCatLabel.trim()
+    if (!label) return
+    // Use a slug-like value derived from the label
+    const value = label.toLowerCase().replace(/\s+/g, "_")
+    addCategory({ value, label, color: selectedColor.color, dot: selectedColor.dot })
+    setNewCatLabel("")
+  }
+
+  function handleAddMember() {
+    const name = newMemberName.trim()
+    if (!name) return
+    addMember(name)
+    setNewMemberName("")
   }
 
   function handleSubmit() {
@@ -138,6 +173,8 @@ export function AddEventDialog() {
       duration:     60,
       type:         form.type as EventType,
       customerName: customer?.name,
+      address:      form.address.trim() || undefined,
+      assignee:     form.assignee || undefined,
     })
     handleOpenChange(false)
     toast.success("Wydarzenie zostało dodane.")
@@ -151,7 +188,7 @@ export function AddEventDialog() {
     <>
       <Button variant="default" size="lg" onClick={() => setOpen(true)}>
         <HugeiconsIcon icon={CalendarAdd01Icon} data-icon="inline-start" />
-        Add event
+        Dodaj wydarzenie
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -165,11 +202,11 @@ export function AddEventDialog() {
             {/* Nazwa wydarzenia — required */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Event name <span className="text-destructive">*</span>
+                Nazwa wydarzenia <span className="text-destructive">*</span>
               </label>
               <Input
                 className={inputLg}
-                placeholder="e.g. Foundation inspection"
+                placeholder="np. Inspekcja fundamentów"
                 value={form.title}
                 onChange={(e) => {
                   setForm((f) => ({ ...f, title: e.target.value }))
@@ -178,7 +215,7 @@ export function AddEventDialog() {
                 aria-invalid={errors.title ? true : undefined}
               />
               {errors.title && (
-                <p className="text-[11px] text-destructive">Enter an event name.</p>
+                <p className="text-[11px] text-destructive">Podaj nazwę wydarzenia.</p>
               )}
             </div>
 
@@ -279,9 +316,82 @@ export function AddEventDialog() {
             {/* Kategoria + Status */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Kategoria <span className="text-destructive">*</span>
-                </label>
+                {/* Label row with manage toggle */}
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Kategoria <span className="text-destructive">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setManagingCategories(v => !v)}
+                    className={cn(
+                      "flex items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground",
+                      managingCategories && "text-foreground"
+                    )}
+                  >
+                    <HugeiconsIcon icon={Settings01Icon} size={11} />
+                    Zarządzaj
+                  </button>
+                </div>
+
+                {/* Inline category management panel */}
+                {managingCategories && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 flex flex-col gap-2">
+                    {/* Existing categories list */}
+                    <div className="flex flex-col gap-1">
+                      {categories.map(cat => (
+                        <div key={cat.value} className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/40">
+                          <div className={cn("size-2 rounded-full shrink-0", cat.dot)} />
+                          <span className="flex-1 text-xs text-foreground">{cat.label}</span>
+                          {/* Seed categories cannot be removed */}
+                          {!SEED_CATEGORIES.includes(cat.value) && (
+                            <button
+                              type="button"
+                              onClick={() => removeCategory(cat.value)}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <HugeiconsIcon icon={Cancel01Icon} size={12} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {/* Add new category form */}
+                    <div className="border-t border-border pt-2 flex flex-col gap-2">
+                      <Input
+                        placeholder="Nazwa kategorii"
+                        value={newCatLabel}
+                        onChange={(e) => setNewCatLabel(e.target.value)}
+                        className="h-7 text-xs px-2"
+                      />
+                      {/* Color picker */}
+                      <div className="flex gap-1.5">
+                        {COLOR_OPTIONS.map(opt => (
+                          <button
+                            key={opt.name}
+                            type="button"
+                            onClick={() => setSelectedColor(opt)}
+                            className={cn(
+                              "size-5 rounded-full transition-transform hover:scale-110",
+                              opt.bg,
+                              selectedColor.name === opt.name && "ring-2 ring-offset-1 ring-foreground/30"
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        type="button"
+                        onClick={handleAddCategory}
+                        className="h-7 text-xs"
+                      >
+                        Dodaj
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <Select
                   value={form.type}
                   onValueChange={(v) => {
@@ -298,7 +408,7 @@ export function AddEventDialog() {
                   </SelectTrigger>
                   <SelectContent position="popper">
                     <SelectGroup>
-                      {EVENT_TYPES.map((t) => (
+                      {categories.map((t) => (
                         <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                       ))}
                     </SelectGroup>
@@ -331,7 +441,59 @@ export function AddEventDialog() {
 
             {/* Kto jedzie */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Kto jedzie</label>
+              {/* Label row with manage toggle */}
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-muted-foreground">Kto jedzie</label>
+                <button
+                  type="button"
+                  onClick={() => setManagingMembers(v => !v)}
+                  className={cn(
+                    "flex items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground",
+                    managingMembers && "text-foreground"
+                  )}
+                >
+                  <HugeiconsIcon icon={UserAdd01Icon} size={11} />
+                  Zarządzaj
+                </button>
+              </div>
+
+              {/* Inline member management panel */}
+              {managingMembers && (
+                <div className="rounded-lg border border-border bg-muted/30 p-3 flex flex-col gap-2">
+                  <div className="flex flex-col gap-1">
+                    {members.map(m => (
+                      <div key={m} className="flex items-center gap-2 rounded-md px-2 py-1 hover:bg-muted/40">
+                        <span className="flex-1 text-xs text-foreground">{m}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeMember(m)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <HugeiconsIcon icon={Cancel01Icon} size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t border-border pt-2 flex gap-2">
+                    <Input
+                      placeholder="Imię i nazwisko"
+                      value={newMemberName}
+                      onChange={(e) => setNewMemberName(e.target.value)}
+                      className="h-7 text-xs px-2 flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      type="button"
+                      onClick={handleAddMember}
+                      className="h-7 text-xs px-2"
+                    >
+                      Dodaj
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <Select
                 value={form.assignee}
                 onValueChange={(v) => setForm((f) => ({ ...f, assignee: v }))}
@@ -341,7 +503,7 @@ export function AddEventDialog() {
                 </SelectTrigger>
                 <SelectContent position="popper">
                   <SelectGroup>
-                    {TEAM_MEMBERS.map((m) => (
+                    {members.map((m) => (
                       <SelectItem key={m} value={m}>{m}</SelectItem>
                     ))}
                   </SelectGroup>

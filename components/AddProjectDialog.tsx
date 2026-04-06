@@ -40,8 +40,8 @@ const WORK_TYPES = [
 ]
 
 const PROJECT_STATUSES: { value: ProjectStatus; label: string }[] = [
-  { value: "Ordered", label: "Ordered" },
-  { value: "Paid",    label: "Paid"    },
+  { value: "Zamówione", label: "Zamówione" },
+  { value: "Opłacone",  label: "Opłacone"  },
 ]
 
 // Matches SelectTrigger size="lg"
@@ -60,7 +60,7 @@ export function AddProjectDialog() {
     customerId:       "",
     address:          "",       // installation address
     type:             "",
-    status:           "Ordered" as ProjectStatus,
+    status:           "Zamówione" as ProjectStatus,
     completionDate:   undefined as Date | undefined,
     offerNumber:      "",
   }

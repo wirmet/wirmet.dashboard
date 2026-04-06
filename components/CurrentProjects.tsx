@@ -1,23 +1,50 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogClose,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { Input } from "@/components/ui/input"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { IconSvgElement } from "@hugeicons/react"
 import {
   Cancel01Icon,
   PencilEdit01Icon,
+  Delete01Icon,
   ArrowRight01Icon,
   CheckmarkCircle01Icon,
   Folder01Icon,
-  Invoice01Icon,
-  Wrench01Icon,
   Calendar01Icon,
   CreditCardIcon,
   DeliveryTruck01Icon,
@@ -25,58 +52,81 @@ import {
   Building01Icon,
   HashtagIcon,
   Location01Icon,
-  MoreHorizontalIcon,
-  Share01Icon,
-  Download01Icon,
+  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
 import Link from "next/link"
 import { useProjects, type ProjectStatus, type Project } from "@/components/ProjectsContext"
 import { AddProjectDialog } from "@/components/AddProjectDialog"
 
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatPrice(n: number): string {
+  return n.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function projectTotal(p: Project): number {
+  return p.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0)
+}
+
+function parseDeadline(deadline: string): number {
+  return new Date(deadline.replace("Termin: ", "")).getTime()
+}
+
 // ─── Status badge ──────────────────────────────────────────────────────────────
-// Paid → wirmet-green (positive), Ordered → wirmet-blue (in progress)
 
 function StatusBadge({ status }: { status: ProjectStatus }) {
   return (
     <Badge
       variant="outline"
       className={cn(
-        "text-[11px]",
-        status === "Paid"
+        "shrink-0 text-[11px]",
+        status === "Opłacone"
           ? "bg-wirmet-green/10 text-wirmet-green border-wirmet-green/20"
           : "bg-wirmet-blue/10  text-wirmet-blue  border-wirmet-blue/20"
       )}
     >
-      {status}
+      {status === "Opłacone" ? "Opłacone" : "W toku"}
+    </Badge>
+  )
+}
+
+// ─── Type badge ────────────────────────────────────────────────────────────────
+
+function TypeBadge({ type }: { type: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "shrink-0 text-[11px]",
+        type === "Montaż" || type === "Installation"
+          ? "bg-wirmet-orange/10 text-wirmet-orange border-wirmet-orange/20"
+          : "bg-wirmet-blue/10 text-wirmet-blue border-wirmet-blue/20"
+      )}
+    >
+      {type === "Installation" ? "Montaż" : type === "Delivery" ? "Dostawa" : type}
     </Badge>
   )
 }
 
 // ─── Type accent strip ─────────────────────────────────────────────────────────
-// Left vertical bar on each project row — colored by work type, mirrors stat-card gradient bars
 
 const typeAccent: Record<string, string> = {
+  "Montaż":       "bg-wirmet-orange",
   "Installation": "bg-wirmet-orange",
+  "Dostawa":      "bg-wirmet-blue",
   "Delivery":     "bg-wirmet-blue",
 }
 
-// ─── Icon row (detail dialog) ──────────────────────────────────────────────────
+// ─── IconRow ───────────────────────────────────────────────────────────────────
 
-function IconRow({
-  icon,
-  label,
-  children,
-  className,
-}: {
+function IconRow({ icon, label, children }: {
   icon: IconSvgElement
   label: string
   children: React.ReactNode
-  className?: string
 }) {
   return (
-    <div className={cn("flex items-center justify-between px-4 py-3", className)}>
+    <div className="flex items-center justify-between px-4 py-3">
       <div className="flex items-center gap-2.5">
         <HugeiconsIcon icon={icon} size={14} className="shrink-0 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">{label}</span>
@@ -88,159 +138,337 @@ function IconRow({
 
 // ─── Project detail dialog ─────────────────────────────────────────────────────
 
-function ProjectDialog({ project }: { project: Project }) {
-  const total = project.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
-  const totalFixed = total.toFixed(2)
-  const [whole, cents] = totalFixed.split(".")
-  const wholeFormatted = Number(whole).toLocaleString("pl-PL")
+function ProjectDetailDialog({ project, open, onOpenChange, onEdit, onDelete }: {
+  project: Project
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const total    = projectTotal(project)
+  const hasItems = project.items.length > 0
 
   return (
-    <DialogContent
-      showCloseButton={false}
-      className="flex max-h-[90vh] flex-col overflow-hidden bg-background p-0 border border-border sm:max-w-md"
-    >
-      <DialogTitle className="sr-only">{project.client} — szczegóły realizacji</DialogTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        showCloseButton={false}
+        className="flex max-h-[90vh] flex-col overflow-hidden bg-background p-0 border border-border sm:max-w-md"
+      >
+        <DialogTitle className="sr-only">{project.client} — szczegóły realizacji</DialogTitle>
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4">
-        <p className="text-sm font-semibold text-foreground">Szczegóły realizacji</p>
-        <DialogClose asChild>
-          <Button variant="ghost" size="icon-sm">
-            <HugeiconsIcon icon={Cancel01Icon} data-icon strokeWidth={2} />
-          </Button>
-        </DialogClose>
-      </div>
-
-      {/* Scrollable body */}
-      <div className="flex flex-col gap-3 overflow-y-auto px-4 pb-4">
-
-        {/* Hero — total order value */}
-        <div className="rounded-xl bg-card px-5 py-4">
-          <p className="mb-1.5 text-xs text-muted-foreground">Wartość zamówienia</p>
-          <p className="text-2xl font-semibold text-muted-foreground">
-            {wholeFormatted},{cents} zł
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Realizacja
           </p>
+          <DialogClose asChild>
+            <Button variant="ghost" size="icon-sm">
+              <HugeiconsIcon icon={Cancel01Icon} data-icon strokeWidth={2} />
+            </Button>
+          </DialogClose>
         </div>
 
-        {/* Offer info + status */}
-        <div className="overflow-hidden rounded-xl bg-card">
-          <IconRow icon={Invoice01Icon} label="Numer oferty">{project.offerNumber}</IconRow>
-          <IconRow icon={CheckmarkCircle01Icon} label="Status" className="border-t border-border">
-            <StatusBadge status={project.status} />
-          </IconRow>
-          <IconRow icon={Wrench01Icon} label="Rodzaj prac" className="border-t border-border">{project.type}</IconRow>
-        </div>
+        {/* Body */}
+        <div className="flex flex-col gap-3 overflow-y-auto px-4 pb-4">
 
-        {/* Dates */}
-        <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
-          <IconRow icon={Calendar01Icon} label="Data zamówienia">{project.orderDate}</IconRow>
-          <IconRow icon={CreditCardIcon} label="Termin płatności" className="pb-5">{project.paymentDue}</IconRow>
-          <IconRow icon={DeliveryTruck01Icon} label="Data dostawy">{project.deliveryDate}</IconRow>
-          <IconRow icon={Flag01Icon} label="Data realizacji">{project.completionDate}</IconRow>
-        </div>
-
-        {/* Company + addresses */}
-        <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
-          <IconRow icon={Building01Icon} label="Firma">{project.companyName}</IconRow>
-          <IconRow icon={HashtagIcon} label="NIP" className="pb-5">{project.nip}</IconRow>
-          <IconRow icon={Location01Icon} label="Adres firmy">{project.companyAddress}</IconRow>
-          <IconRow icon={Location01Icon} label="Adres montażu">{project.address}</IconRow>
-        </div>
-
-        {/* Items & services */}
-        <div className="flex flex-col gap-2">
-          <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Pozycje i usługi
-          </p>
-          <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
-            {project.items.map((item, i) => (
-              <div key={i} className="flex items-center justify-between px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">{item.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {item.quantity} {item.unit} × {item.unitPrice.toFixed(2)} zł
-                  </p>
-                </div>
-                <p className="shrink-0 pl-4 text-sm font-semibold text-foreground">
-                  {(item.quantity * item.unitPrice).toFixed(2)} zł
+          {/* Hero — client + offer number + status */}
+          <div className="overflow-hidden rounded-xl bg-card">
+            <div className="h-[2px] bg-gradient-to-r from-wirmet-green to-wirmet-green/0" />
+            <div className="px-5 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-[family-name:var(--font-display)] text-lg font-bold leading-snug text-foreground">
+                  {project.client}
                 </p>
+                <StatusBadge status={project.status} />
               </div>
-            ))}
-            <div className="flex items-center justify-between px-4 py-3">
-              <p className="text-sm font-semibold text-foreground">Razem</p>
-              <p className="text-sm font-bold text-foreground">{totalFixed} zł</p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">{project.offerNumber}</p>
+              <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+                <span>Termin: {project.completionDate}</span>
+                <span className="text-muted-foreground/30">·</span>
+                <span>{project.type}</span>
+              </div>
             </div>
           </div>
+
+          {/* Dates */}
+          <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
+            <IconRow icon={Calendar01Icon} label="Data zamówienia">{project.orderDate}</IconRow>
+            <IconRow icon={CreditCardIcon} label="Termin płatności">{project.paymentDue}</IconRow>
+            <IconRow icon={DeliveryTruck01Icon} label="Data dostawy">{project.deliveryDate}</IconRow>
+            <IconRow icon={Flag01Icon} label="Data realizacji">{project.completionDate}</IconRow>
+          </div>
+
+          {/* Company */}
+          <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
+            <IconRow icon={Building01Icon} label="Firma">{project.companyName}</IconRow>
+            <IconRow icon={HashtagIcon} label="NIP">{project.nip}</IconRow>
+            <IconRow icon={Location01Icon} label="Adres firmy">{project.companyAddress}</IconRow>
+            <IconRow icon={Location01Icon} label="Adres montażu">{project.address}</IconRow>
+          </div>
+
+          {/* Items */}
+          {hasItems && (
+            <div className="flex flex-col gap-2">
+              <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Pozycje i usługi
+              </p>
+              <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
+                {project.items.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between px-4 py-3">
+                    <div className="min-w-0 flex-1 pr-4">
+                      <p className="text-sm font-medium text-foreground">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.quantity} {item.unit} × {item.unitPrice.toFixed(2)} zł
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                      {(item.quantity * item.unitPrice).toFixed(2)} zł
+                    </p>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between bg-muted/20 px-4 py-3">
+                  <p className="text-sm font-semibold text-foreground">Razem</p>
+                  <p className="text-sm font-bold tabular-nums text-foreground">{formatPrice(total)} zł</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-between border-t border-border px-5 py-4">
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon-sm">
-            <HugeiconsIcon icon={MoreHorizontalIcon} data-icon />
+        {/* Footer */}
+        <div className="flex items-center justify-between border-t border-border px-5 py-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-red-400 hover:text-red-400 hover:bg-red-400/10"
+            onClick={() => { onOpenChange(false); onDelete() }}
+          >
+            <HugeiconsIcon icon={Delete01Icon} data-icon="inline-start" />
+            Usuń
           </Button>
-          <Button variant="ghost" size="icon-sm">
-            <HugeiconsIcon icon={Share01Icon} data-icon />
-          </Button>
-          <Button variant="ghost" size="icon-sm">
-            <HugeiconsIcon icon={Download01Icon} data-icon />
+          <Button variant="outline" size="lg" onClick={() => { onOpenChange(false); onEdit() }}>
+            <HugeiconsIcon icon={PencilEdit01Icon} data-icon="inline-start" />
+            Edytuj
           </Button>
         </div>
-        <Button variant="outline" size="lg">
-          <HugeiconsIcon icon={PencilEdit01Icon} data-icon="inline-start" />
-          Edytuj
-        </Button>
-      </div>
-    </DialogContent>
+      </DialogContent>
+    </Dialog>
   )
 }
 
-// ─── Deadline sort helper ──────────────────────────────────────────────────────
-// Parses "Due 20 Mar 2025" → Date so we can sort ascending (most urgent first)
+// ─── Edit dialog ───────────────────────────────────────────────────────────────
 
-function parseDeadline(deadline: string): number {
-  return new Date(deadline.replace("Due ", "")).getTime()
+function EditProjectDialog({ project, open, onOpenChange, onSave }: {
+  project: Project
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  onSave: (updates: Partial<Project>) => void
+}) {
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [form, setForm] = useState({
+    status:         "Zamówione" as ProjectStatus,
+    type:           "Montaż",
+    address:        "",
+    completionDate: undefined as Date | undefined,
+  })
+
+  useEffect(() => {
+    if (open) {
+      setCalendarOpen(false)
+      setForm({
+        status:   project.status,
+        type:     project.type,
+        address:  project.address,
+        completionDate:
+          project.completionDate && project.completionDate !== "—"
+            ? new Date(project.completionDate)
+            : undefined,
+      })
+    }
+  }, [open, project.status, project.type, project.address, project.completionDate])
+
+  function handleSave() {
+    const completionDate = form.completionDate
+      ? form.completionDate.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+      : project.completionDate
+    onSave({
+      status:         form.status,
+      type:           form.type,
+      address:        form.address,
+      completionDate,
+      deliveryDate:   completionDate,
+      deadline:       `Termin: ${completionDate}`,
+    })
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md" showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>Edytuj realizację</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-4 py-2">
+          {/* Status + Type */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Status</label>
+              <Select
+                value={form.status}
+                onValueChange={v => setForm(f => ({ ...f, status: v as ProjectStatus }))}
+              >
+                <SelectTrigger size="lg" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectGroup>
+                    <SelectItem value="Zamówione">W toku</SelectItem>
+                    <SelectItem value="Opłacone">Opłacone</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Rodzaj prac</label>
+              <Select
+                value={form.type}
+                onValueChange={v => setForm(f => ({ ...f, type: v }))}
+              >
+                <SelectTrigger size="lg" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectGroup>
+                    <SelectItem value="Montaż">Montaż</SelectItem>
+                    <SelectItem value="Dostawa">Dostawa</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Address */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Adres montażu</label>
+            <div className="relative">
+              <Input
+                className="h-9 px-3 pr-8 text-sm"
+                value={form.address}
+                onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+              />
+              <HugeiconsIcon
+                icon={Location01Icon}
+                size={14}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+            </div>
+          </div>
+
+          {/* Completion date */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Data realizacji</label>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-input/20 px-3 text-sm transition-colors",
+                    "hover:bg-input/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                    !form.completionDate && "text-muted-foreground"
+                  )}
+                >
+                  <span className="truncate">
+                    {form.completionDate
+                      ? form.completionDate.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" })
+                      : "Wybierz datę"}
+                  </span>
+                  <HugeiconsIcon icon={Calendar01Icon} size={14} className="shrink-0 text-muted-foreground" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={form.completionDate}
+                  onSelect={date => {
+                    setForm(f => ({ ...f, completionDate: date }))
+                    setCalendarOpen(false)
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" size="lg" onClick={() => onOpenChange(false)}>Anuluj</Button>
+          <Button variant="default" size="lg" onClick={handleSave}>
+            <HugeiconsIcon icon={Tick02Icon} data-icon="inline-start" />
+            Zapisz zmiany
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Delete confirm dialog ─────────────────────────────────────────────────────
+
+function DeleteConfirmDialog({ open, onOpenChange, onConfirm, description }: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  onConfirm: () => void
+  description: string
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Usunąć realizację?</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Anuluj</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={onConfirm}
+          >
+            Usuń
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
 }
 
 // ─── Project row ───────────────────────────────────────────────────────────────
-// flex:1 on each row so they fill the container equally — height stays fixed
-// regardless of how many projects are shown (container height driven by right column)
 
-function ProjectRow({
-  project,
-  onClick,
-}: {
-  project: Project
-  onClick: () => void
-}) {
-  const total = project.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+function ProjectRow({ project, onClick }: { project: Project; onClick: () => void }) {
+  const total  = projectTotal(project)
   const accent = typeAccent[project.type] ?? "bg-muted-foreground/30"
 
   return (
     <div
       onClick={onClick}
-      // flex:1 makes every row the same height; justify-center keeps content centred
-      // vertically when the row is taller (fewer than 5 projects)
       style={{ flex: 1 }}
       className="relative flex flex-col justify-center gap-2 py-3 pl-9 pr-5 cursor-pointer transition-colors hover:bg-muted/20"
     >
-      {/* Left accent strip — mirrors the horizontal gradient bar on stat cards */}
+      {/* Left accent strip */}
       <div className={cn("absolute left-5 top-1/4 bottom-1/4 w-[3px] rounded-full", accent)} />
 
-      {/* Top row: work type label + status badge */}
+      {/* Type label + status badge */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          {project.type}
+          {project.type === "Installation" ? "Montaż" : project.type === "Delivery" ? "Dostawa" : project.type}
         </span>
         <StatusBadge status={project.status} />
       </div>
 
-      {/* Client name — primary identifier */}
+      {/* Client */}
       <p className="text-sm font-semibold leading-tight text-foreground">{project.client}</p>
 
-      {/* Meta row: offer number · deadline · value */}
+      {/* Meta */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
           <span className="shrink-0">{project.offerNumber}</span>
@@ -260,24 +488,39 @@ function ProjectRow({
 // ─── CurrentProjects ───────────────────────────────────────────────────────────
 
 export function CurrentProjects() {
-  const { projects } = useProjects()
-  const [selected, setSelected] = useState<Project | null>(null)
+  const { projects, updateProject, deleteProject } = useProjects()
 
-  // Sort ascending by deadline (nearest = most urgent first), cap at 5
+  const [selected,    setSelected]    = useState<Project | null>(null)
+  const [detailOpen,  setDetailOpen]  = useState(false)
+  const [editOpen,    setEditOpen]    = useState(false)
+  const [deleteOpen,  setDeleteOpen]  = useState(false)
+
+  // Clear selected after all dialogs close (300 ms = animation duration)
+  useEffect(() => {
+    if (!detailOpen && !editOpen && !deleteOpen) {
+      const t = setTimeout(() => setSelected(null), 300)
+      return () => clearTimeout(t)
+    }
+  }, [detailOpen, editOpen, deleteOpen])
+
   const visible = [...projects]
     .sort((a, b) => parseDeadline(a.deadline) - parseDeadline(b.deadline))
     .slice(0, 5)
 
-  // Empty slots fill the remaining space so the component is always the same height
   const emptySlots = Math.max(0, 5 - visible.length)
+
+  function openDetail(project: Project) {
+    setSelected(project)
+    setDetailOpen(true)
+  }
 
   return (
     <>
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Green 2px gradient bar — same language as stat cards, links this section to "Realizacje w toku" */}
+        {/* Green gradient bar */}
         <div className="h-[2px] bg-gradient-to-r from-wirmet-green to-wirmet-green/0" />
 
-        {/* Section header — folder icon tinted green mirrors the stat card above */}
+        {/* Section header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
             <HugeiconsIcon icon={Folder01Icon} size={14} className="shrink-0 text-wirmet-green" />
@@ -294,14 +537,13 @@ export function CurrentProjects() {
           </Link>
         </div>
 
-        {/* Project rows + empty state — flex-1 on each row keeps them equal height.
-            Empty state gets flex = number of missing slots so the visual weight matches. */}
+        {/* Rows */}
         <div className="flex flex-1 flex-col divide-y divide-border overflow-hidden">
           {visible.map((project) => (
             <ProjectRow
               key={project.offerNumber}
               project={project}
-              onClick={() => setSelected(project)}
+              onClick={() => openDetail(project)}
             />
           ))}
 
@@ -318,12 +560,33 @@ export function CurrentProjects() {
         </div>
       </div>
 
-      <Dialog
-        open={selected !== null}
-        onOpenChange={(open) => { if (!open) setSelected(null) }}
-      >
-        {selected && <ProjectDialog project={selected} />}
-      </Dialog>
+      {/* Dialogs */}
+      {selected && (
+        <>
+          <ProjectDetailDialog
+            project={selected}
+            open={detailOpen}
+            onOpenChange={setDetailOpen}
+            onEdit={() => setEditOpen(true)}
+            onDelete={() => setDeleteOpen(true)}
+          />
+          <EditProjectDialog
+            project={selected}
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            onSave={updates => updateProject(selected.offerNumber, updates)}
+          />
+          <DeleteConfirmDialog
+            open={deleteOpen}
+            onOpenChange={setDeleteOpen}
+            onConfirm={() => {
+              deleteProject(selected.offerNumber)
+              setDeleteOpen(false)
+            }}
+            description={`Realizacja klienta "${selected.client}" zostanie trwale usunięta. Tej operacji nie można cofnąć.`}
+          />
+        </>
+      )}
     </>
   )
 }

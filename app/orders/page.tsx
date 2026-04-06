@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { PageSetup } from "@/components/PageSetup"
 import { Button } from "@/components/ui/button"
@@ -156,11 +157,11 @@ function StatusBadge({ status }: { status: ProjectStatus }) {
   return (
     <Badge variant="outline" className={cn(
       "shrink-0 text-[11px]",
-      status === "Paid"
+      status === "Opłacone"
         ? "bg-wirmet-green/10 text-wirmet-green border-wirmet-green/20"
         : "bg-wirmet-blue/10 text-wirmet-blue border-wirmet-blue/20"
     )}>
-      {status === "Paid" ? "Opłacone" : "W toku"}
+      {status === "Opłacone" ? "Opłacone" : "W toku"}
     </Badge>
   )
 }
@@ -205,8 +206,8 @@ function ProjectDetailDialog({ project, open, onOpenChange, onEdit, onDelete }: 
   onEdit: () => void
   onDelete: () => void
 }) {
-  const total = projectTotal(project)
-  const [whole, cents] = total.toFixed(2).split(".")
+  const total    = projectTotal(project)
+  const hasItems = project.items.length > 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -218,7 +219,9 @@ function ProjectDetailDialog({ project, open, onOpenChange, onEdit, onDelete }: 
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4">
-          <p className="text-sm font-semibold text-foreground">Szczegóły realizacji</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Realizacja
+          </p>
           <DialogClose asChild>
             <Button variant="ghost" size="icon-sm">
               <HugeiconsIcon icon={Cancel01Icon} data-icon strokeWidth={2} />
@@ -226,26 +229,26 @@ function ProjectDetailDialog({ project, open, onOpenChange, onEdit, onDelete }: 
           </DialogClose>
         </div>
 
-        {/* Scrollable body */}
+        {/* Body */}
         <div className="flex flex-col gap-3 overflow-y-auto px-4 pb-4">
 
-          {/* Value hero */}
-          <div className="rounded-xl bg-card px-5 py-4">
-            <p className="mb-1.5 text-xs text-muted-foreground">Wartość zamówienia</p>
-            <p className="text-2xl font-semibold text-muted-foreground">
-              {Number(whole).toLocaleString("pl-PL")},{cents} zł
-            </p>
-          </div>
-
-          {/* Offer + status */}
-          <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
-            <IconRow icon={Invoice01Icon} label="Numer oferty">{project.offerNumber}</IconRow>
-            <IconRow icon={CheckmarkCircle01Icon} label="Status">
-              <StatusBadge status={project.status} />
-            </IconRow>
-            <IconRow icon={Wrench01Icon} label="Rodzaj prac">
-              <TypeBadge type={project.type} />
-            </IconRow>
+          {/* Hero — client + offer number + status */}
+          <div className="overflow-hidden rounded-xl bg-card">
+            <div className="h-[2px] bg-gradient-to-r from-wirmet-green to-wirmet-green/0" />
+            <div className="px-5 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-[family-name:var(--font-display)] text-lg font-bold leading-snug text-foreground">
+                  {project.client}
+                </p>
+                <StatusBadge status={project.status} />
+              </div>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">{project.offerNumber}</p>
+              <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+                <span>Termin: {project.completionDate}</span>
+                <span className="text-muted-foreground/30">·</span>
+                <span>{project.type}</span>
+              </div>
+            </div>
           </div>
 
           {/* Dates */}
@@ -265,28 +268,28 @@ function ProjectDetailDialog({ project, open, onOpenChange, onEdit, onDelete }: 
           </div>
 
           {/* Items */}
-          {project.items.length > 0 && (
+          {hasItems && (
             <div className="flex flex-col gap-2">
-              <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Pozycje i usługi
               </p>
               <div className="overflow-hidden rounded-xl bg-card divide-y divide-border">
                 {project.items.map((item, i) => (
                   <div key={i} className="flex items-center justify-between px-4 py-3">
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 pr-4">
                       <p className="text-sm font-medium text-foreground">{item.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {item.quantity} {item.unit} × {item.unitPrice.toFixed(2)} zł
                       </p>
                     </div>
-                    <p className="shrink-0 pl-4 text-sm font-semibold text-foreground">
+                    <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
                       {(item.quantity * item.unitPrice).toFixed(2)} zł
                     </p>
                   </div>
                 ))}
-                <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center justify-between bg-muted/20 px-4 py-3">
                   <p className="text-sm font-semibold text-foreground">Razem</p>
-                  <p className="text-sm font-bold text-foreground">{formatPrice(total)} zł</p>
+                  <p className="text-sm font-bold tabular-nums text-foreground">{formatPrice(total)} zł</p>
                 </div>
               </div>
             </div>
@@ -324,7 +327,7 @@ function EditProjectDialog({ project, open, onOpenChange, onSave }: {
 }) {
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [form, setForm] = useState({
-    status:         "Ordered" as ProjectStatus,
+    status:         "Zamówione" as ProjectStatus,
     type:           "Installation",
     address:        "",
     completionDate: undefined as Date | undefined,
@@ -379,8 +382,8 @@ function EditProjectDialog({ project, open, onOpenChange, onSave }: {
                 </SelectTrigger>
                 <SelectContent position="popper">
                   <SelectGroup>
-                    <SelectItem value="Ordered">W toku</SelectItem>
-                    <SelectItem value="Paid">Opłacone</SelectItem>
+                    <SelectItem value="Zamówione">W toku</SelectItem>
+                    <SelectItem value="Opłacone">Opłacone</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -568,7 +571,7 @@ function EmptyState() {
 
 // ─── Page ────────────────────────────────────────────────────────────────────────
 
-export default function RealizacjePage() {
+function RealizacjePageInner() {
   const { projects, deleteProject, updateProject } = useProjects()
 
   const searchParams = useSearchParams()
@@ -593,15 +596,15 @@ export default function RealizacjePage() {
 
   // ── Stats ────────────────────────────────────────────────────────────────────
   const total      = projects.length
-  const inProgress = projects.filter(p => p.status === "Ordered").length
-  const paid       = projects.filter(p => p.status === "Paid").length
+  const inProgress = projects.filter(p => p.status === "Zamówione").length
+  const paid       = projects.filter(p => p.status === "Opłacone").length
 
   // ── Filtering ────────────────────────────────────────────────────────────────
   const filtered = projects.filter(p => {
     const q = search.toLowerCase()
     if (q && !p.client.toLowerCase().includes(q) && !p.companyName.toLowerCase().includes(q)) return false
-    if (statusFilter === "W toku"   && p.status !== "Ordered")    return false
-    if (statusFilter === "Opłacone" && p.status !== "Paid")       return false
+    if (statusFilter === "W toku"   && p.status !== "Zamówione") return false
+    if (statusFilter === "Opłacone" && p.status !== "Opłacone")  return false
     if (typeFilter   === "Montaż"   && p.type !== "Installation") return false
     if (typeFilter   === "Dostawa"  && p.type !== "Delivery")     return false
     return true
@@ -762,4 +765,8 @@ export default function RealizacjePage() {
       )}
     </div>
   )
+}
+
+export default function RealizacjePage() {
+  return <Suspense><RealizacjePageInner /></Suspense>
 }

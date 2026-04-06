@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { PageSetup } from "@/components/PageSetup"
 import { Badge } from "@/components/ui/badge"
@@ -67,11 +67,11 @@ type SortDirection = "asc" | "desc"
 type SortColumn = "id" | "client" | "destination" | "carrier" | "date" | "status"
 
 const ALL_STATUSES: ShipmentStatus[] = [
-  "Nowe", "Przygotowywane", "Do wysłania", "Pending", "In transit", "Wstrzymane", "Delivered",
+  "Nowe", "Przygotowywane", "Do wysłania", "Oczekująca", "W transporcie", "Wstrzymane", "Dostarczone",
 ]
 const STATUS_LABELS: Record<ShipmentStatus, string> = {
   "Nowe": "Nowe", "Przygotowywane": "Przygotowywane", "Do wysłania": "Do wysłania",
-  "Pending": "Oczekuje", "In transit": "W drodze", "Wstrzymane": "Wstrzymane", "Delivered": "Dostarczone",
+  "Oczekująca": "Oczekująca", "W transporcie": "W transporcie", "Wstrzymane": "Wstrzymane", "Dostarczone": "Dostarczone",
 }
 const ALL_CARRIERS = ["DPD", "DHL", "Geodis", "InPost", "GLS"]
 
@@ -80,20 +80,20 @@ const statusStyle: Record<ShipmentStatus, string> = {
   "Nowe":           "bg-violet-500/10 text-violet-400 border-violet-500/20",
   "Przygotowywane": "bg-amber-500/10 text-amber-400 border-amber-500/20",
   "Do wysłania":    "bg-sky-500/10 text-sky-400 border-sky-500/20",
-  "Pending":        "bg-zinc-500/10 text-muted-foreground border-zinc-500/20",
-  "In transit":     "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  "Oczekująca":     "bg-zinc-500/10 text-muted-foreground border-zinc-500/20",
+  "W transporcie":  "bg-blue-500/10 text-blue-400 border-blue-500/20",
   "Wstrzymane":     "bg-red-500/10 text-red-400 border-red-500/20",
-  "Delivered":      "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  "Dostarczone":    "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
 }
 
 const accentColor: Record<ShipmentStatus, string> = {
   "Nowe":           "bg-violet-400",
   "Przygotowywane": "bg-amber-400",
   "Do wysłania":    "bg-sky-400",
-  "Pending":        "bg-muted-foreground/40",
-  "In transit":     "bg-blue-400",
+  "Oczekująca":     "bg-muted-foreground/40",
+  "W transporcie":  "bg-blue-400",
   "Wstrzymane":     "bg-red-400",
-  "Delivered":      "bg-emerald-400",
+  "Dostarczone":    "bg-emerald-400",
 }
 
 const columns: { key: SortColumn; label: string }[] = [
@@ -119,7 +119,7 @@ function SortIcon({ column, sortColumn, sortDirection }: {
   )
 }
 
-export default function ShipmentsPage() {
+function ShipmentsPageInner() {
   const { shipments, deleteShipment } = useShipments()
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
@@ -428,4 +428,8 @@ export default function ShipmentsPage() {
 
     </>
   )
+}
+
+export default function ShipmentsPage() {
+  return <Suspense><ShipmentsPageInner /></Suspense>
 }
